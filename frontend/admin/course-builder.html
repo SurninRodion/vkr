@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Конструктор курса — Prompt Academy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="page">
+    <header class="navbar">
+      <div class="container navbar-inner">
+        <div class="navbar-left">
+          <a href="../index.html" class="logo">
+            <div class="logo-mark" aria-hidden="true"></div>
+            <span class="logo-text"><span class="logo-name">Prompt</span> <span class="logo-name logo-name--academy">Academy</span></span>
+          </a>
+        </div>
+        <div class="navbar-right" id="navbar-right"></div>
+      </div>
+    </header>
+
+    <main class="layout-main">
+      <section class="container">
+        <div class="admin-layout">
+          <aside class="admin-sidebar">
+            <div class="admin-sidebar-title">Администрирование</div>
+            <a href="./dashboard.html" class="admin-sidebar-link">
+              <span>Dashboard</span>
+            </a>
+            <a href="./tasks.html" class="admin-sidebar-link">
+              <span>Задания</span>
+            </a>
+            <a href="./prompts.html" class="admin-sidebar-link">
+              <span>Библиотека промптов</span>
+            </a>
+            <a href="./courses.html" class="admin-sidebar-link">
+              <span>Курсы</span>
+            </a>
+            <a href="./course-builder.html" class="admin-sidebar-link admin-sidebar-link--active">
+              <span>Конструктор курса</span>
+            </a>
+            <a href="./users.html" class="admin-sidebar-link">
+              <span>Пользователи</span>
+            </a>
+          </aside>
+
+          <div class="admin-main">
+            <div class="admin-page-header">
+              <div>
+                <h1 class="admin-page-title">Конструктор курса</h1>
+                <p class="admin-page-subtitle">
+                  Создавайте курс, модули, уроки и шаги (теория, видео, тест, практика).
+                </p>
+              </div>
+            </div>
+
+            <div id="builder-toolbar" class="builder-toolbar">
+              <label class="form-label">Курс для редактирования</label>
+              <div class="builder-toolbar-row">
+                <select id="course-select" class="form-input" style="max-width: 320px;">
+                  <option value="">— Новый курс —</option>
+                </select>
+                <button type="button" class="btn btn-outline" id="builder-new-course">Создать новый</button>
+              </div>
+            </div>
+
+            <div id="builder-root" class="builder-root">
+              <p class="muted">Выберите курс выше или создайте новый.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div class="footer-brand">
+          <a href="../index.html" class="logo">
+            <div class="logo-mark" aria-hidden="true"></div>
+            <span class="logo-text"><span class="logo-name">Prompt</span> <span class="logo-name logo-name--academy">Academy</span></span>
+          </a>
+          <p class="footer-tagline">Платформа обучения промпт-инжинирингу</p>
+        </div>
+        <nav class="footer-nav">
+          <a href="../courses.html">Курсы</a>
+          <a href="../practice.html">Практика</a>
+          <a href="../library.html">Библиотека</a>
+          <a href="../leaderboard.html">Рейтинг</a>
+        </nav>
+        <div class="footer-bottom">
+          <span class="footer-copy">© 2026 Prompt Academy</span>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Модальное окно: выбор типа шага -->
+    <div class="backdrop" id="modal-step-type" aria-hidden="true">
+      <div class="modal">
+        <h3 class="modal-title">Выберите тип шага</h3>
+        <div class="modal-body step-type-choices">
+          <button type="button" class="btn btn-outline step-type-btn" data-type="theory">Теория</button>
+          <button type="button" class="btn btn-outline step-type-btn" data-type="video">Видео</button>
+          <button type="button" class="btn btn-outline step-type-btn" data-type="test">Тест</button>
+          <button type="button" class="btn btn-outline step-type-btn" data-type="practical">Практическое задание</button>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" data-modal-close>Отмена</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модальное окно: форма шага (заполняется JS по типу) -->
+    <div class="backdrop" id="modal-step-form" aria-hidden="true">
+      <div class="modal modal--wide">
+        <h3 class="modal-title" id="modal-step-form-title">Шаг</h3>
+        <div class="modal-body" id="modal-step-form-body"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" data-modal-close>Отмена</button>
+          <button type="button" class="btn btn-primary" id="modal-step-save">Сохранить шаг</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script type="module" src="../js/app.js"></script>
+    <script type="module" src="../js/admin/courseBuilder.js"></script>
+  </body>
+</html>

@@ -1,0 +1,32 @@
+{
+  "name": "promptlearn-backend",
+  "version": "1.0.0",
+  "description": "Backend API for PromptLearn — a practical platform for learning prompt engineering.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "initdb": "node ./db/initDB.js",
+    "cleartasks": "node ./db/clearTasks.js"
+  },
+  "keywords": [
+    "prompt",
+    "education",
+    "node",
+    "express",
+    "sqlite"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "bcrypt": "^5.1.0",
+    "gigachat": "^0.0.18",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "express": "^4.19.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.1.1",
+    "sqlite3": "^5.1.7",
+    "uuid": "^9.0.1"
+  }
+}

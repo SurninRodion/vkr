@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Админ-панель — Prompt Academy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="page">
+    <header class="navbar">
+      <div class="container navbar-inner">
+        <div class="navbar-left">
+          <a href="../index.html" class="logo">
+            <div class="logo-mark" aria-hidden="true"></div>
+            <span class="logo-text"><span class="logo-name">Prompt</span> <span class="logo-name logo-name--academy">Academy</span></span>
+          </a>
+        </div>
+        <div class="navbar-right" id="navbar-right"></div>
+      </div>
+    </header>
+
+    <main class="layout-main">
+      <section class="container">
+        <div class="admin-layout">
+          <aside class="admin-sidebar">
+            <div class="admin-sidebar-title">Администрирование</div>
+            <a href="./dashboard.html" class="admin-sidebar-link admin-sidebar-link--active">
+              <span>Dashboard</span>
+            </a>
+            <a href="./tasks.html" class="admin-sidebar-link">
+              <span>Задания</span>
+            </a>
+            <a href="./prompts.html" class="admin-sidebar-link">
+              <span>Библиотека промптов</span>
+            </a>
+            <a href="./courses.html" class="admin-sidebar-link">
+              <span>Курсы</span>
+            </a>
+            <a href="./users.html" class="admin-sidebar-link">
+              <span>Пользователи</span>
+            </a>
+          </aside>
+
+          <div class="admin-main">
+            <div class="admin-page-header">
+              <div>
+                <h1 class="admin-page-title">Админ-панель Prompt Academy</h1>
+                <p class="admin-page-subtitle">
+                  Управление заданиями, курсами, библиотекой промптов и пользователями.
+                </p>
+              </div>
+            </div>
+
+            <div class="card">
+              <p class="card-description">
+                Используйте левое меню для перехода к нужным разделам администрирования. Для
+                просмотра ключевых показателей перейдите на страницу «Dashboard».
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div class="footer-brand">
+          <a href="../index.html" class="logo">
+            <div class="logo-mark" aria-hidden="true"></div>
+            <span class="logo-text"><span class="logo-name">Prompt</span> <span class="logo-name logo-name--academy">Academy</span></span>
+          </a>
+          <p class="footer-tagline">Платформа обучения промпт-инжинирингу</p>
+        </div>
+        <nav class="footer-nav">
+          <a href="../courses.html">Курсы</a>
+          <a href="../practice.html">Практика</a>
+          <a href="../library.html">Библиотека</a>
+          <a href="../leaderboard.html">Рейтинг</a>
+        </nav>
+        <div class="footer-bottom">
+          <span class="footer-copy">© 2026 Prompt Academy</span>
+        </div>
+      </div>
+    </footer>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script type="module" src="../js/app.js"></script>
+    <script type="module" src="../js/admin/admin.js"></script>
+  </body>
+</html>
+

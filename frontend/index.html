@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Prompt Academy — Платформа обучения промпт-инжинирингу</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="./styles.css"
+    />
+  </head>
+  <body class="page">
+    <header class="navbar">
+      <div class="container navbar-inner">
+        <div class="navbar-left">
+          <a href="./index.html" class="logo">
+            <div class="logo-mark" aria-hidden="true"></div>
+            <span class="logo-text"><span class="logo-name">Prompt</span> <span class="logo-name logo-name--academy">Academy</span></span>
+          </a>
+          <nav class="navbar-menu">
+            <a
+              href="./courses.html"
+              class="nav-link"
+              data-nav="courses"
+              >Курсы</a
+            >
+            <a
+              href="./practice.html"
+              class="nav-link"
+              data-nav="practice"
+              >Практика</a
+            >
+            <a
+              href="./library.html"
+              class="nav-link"
+              data-nav="library"
+              >Библиотека</a
+            >
+            <a
+              href="./leaderboard.html"
+              class="nav-link"
+              data-nav="leaderboard"
+              >Рейтинг</a
+            >
+          </nav>
+        </div>
+        <div
+          class="navbar-right"
+          id="navbar-right"
+        >
+          <!-- Guest mode buttons by default; JS will replace -->
+          <button
+            class="btn btn-ghost"
+            data-action="open-login"
+          >
+            Профиль
+          </button>
+          <button
+            class="btn btn-primary"
+            data-action="open-login"
+          >
+            Войти
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="layout-main">
+      <section class="hero">
+        <div class="container hero-grid">
+          <div>
+            <div class="eyebrow">
+              <span class="eyebrow-dot"></span>
+              Практическая платформа промпт-инжиниринга
+            </div>
+            <h1 class="hero-title">
+              Освой <span class="hero-highlight">промпт-инжиниринг</span><br />
+              на практике
+            </h1>
+            <p class="hero-subtitle">
+              Платформа для обучения эффективному взаимодействию с искусственным интеллектом.
+            </p>
+            <div class="hero-cta">
+              <button
+                class="btn btn-primary"
+                id="hero-start-btn"
+              >
+                Начать обучение
+              </button>
+              <span class="hero-meta">Без установки. Практика с первого занятия.</span>
+            </div>
+          </div>
+
+          <div class="hero-visual">
+            <div class="hero-card">
+              <div class="hero-orbit"></div>
+              <div class="hero-main">
+                <div class="bot-avatar">
+                  <div class="bot-face">
+                    <span class="bot-eye"></span>
+                    <span class="bot-eye"></span>
+                    <span class="bot-mouth"></span>
+                  </div>
+                </div>
+                <div class="hero-chat">
+                  <div class="chat-bubble chat-bubble-user">
+                    Как написать промпт для объяснения сложной темы простым языком?
+                  </div>
+                  <div class="chat-bubble chat-bubble-ai">
+                    Попробуем структурировать задачу: цель, аудитория, формат ответа и ограничения.
+                  </div>
+                </div>
+              </div>
+              <div class="hero-badges">
+                <div class="hero-badge">Реалистичная практика с ИИ</div>
+                <div class="hero-badge">Разбор промптов по шагам</div>
+              </div>
+              <div class="hero-floating">
+                <div class="metric-card">
+                  <div class="metric-label">Среднее улучшение ответов</div>
+                  <div class="metric-value">+38%</div>
+                  <div class="metric-chip">
+                    <span>▲</span>
+                    после 5 практических заданий
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container">
+          <div class="section-header">
+            <h2 class="section-title">Основные возможности платформы</h2>
+          </div>
+          <div class="card-grid">
+            <article class="card">
+              <div class="card-header">
+                <div class="card-icon">📚</div>
+              </div>
+              <h3 class="card-title">Курсы</h3>
+              <p class="card-description">Обучающие модули от основ до продвинутых техник.</p>
+              <div class="card-footer">
+                <span class="badge-soft">Пошаговые уроки</span>
+                <a
+                  href="./courses.html"
+                  class="muted"
+                >
+                  Подробнее →
+                </a>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-header">
+                <div class="card-icon">✅</div>
+              </div>
+              <h3 class="card-title">Практика</h3>
+              <p class="card-description">Задания и тренировки на реальных сценариях.</p>
+              <div class="card-footer">
+                <span class="badge-soft">Разбор решений</span>
+                <a
+                  href="./practice.html"
+                  class="muted"
+                >
+                  К заданиям →
+                </a>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-header">
+                <div class="card-icon">🧪</div>
+              </div>
+              <h3 class="card-title">Лаборатория</h3>
+              <p class="card-description">Песочница для экспериментов с промптами.</p>
+              <div class="card-footer">
+                <span class="badge-soft">Живой фидбек</span>
+                <a
+                  href="./lab.html"
+                  class="muted"
+                >
+                  В лабораторию →
+                </a>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container">
+          <div class="section-header">
+            <h2 class="section-title">Популярные задания</h2>
+            <p class="section-subtitle">Примеры тренировок, которые ждут вас внутри.</p>
+          </div>
+          <div class="card-grid">
+            <article class="card">
+              <h3 class="card-title">Улучши промпт</h3>
+              <p class="card-description">Исправь ошибочный запрос и повысь качество ответа.</p>
+              <div class="task-card-meta">
+                <div class="task-meta">
+                  <span class="tag tag-yellow">Средний уровень</span>
+                  <span class="task-points">+80 очков</span>
+                </div>
+                <button
+                  class="btn btn-outline"
+                  data-action="guest-task"
+                >
+                  Попробовать
+                </button>
+              </div>
+            </article>
+
+            <article class="card">
+              <h3 class="card-title">Промпт для урока</h3>
+              <p class="card-description">Создай промпт, который превратит тему в сценарий занятия.</p>
+              <div class="task-card-meta">
+                <div class="task-meta">
+                  <span class="tag tag-green">Базовый уровень</span>
+                  <span class="task-points">+50 очков</span>
+                </div>
+                <button
+                  class="btn btn-outline"
+                  data-action="guest-task"
+                >
+                  Попробовать
+                </button>
+              </div>
+            </article>
+
+            <article class="card">
+              <h3 class="card-title">Оптимизируй запрос</h3>
+              <p class="card-description">Сделай промпт короче без потери смысла.</p>
+              <div class="task-card-meta">
+                <div class="task-meta">
+                  <span class="tag tag-red">Продвинутый</span>
+                  <span class="task-points">+120 очков</span>
+                </div>
+                <button
+                  class="btn btn-outline"
+                  data-action="guest-task"
+                >
+                  Попробовать
+                </button>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container split-grid">
+          <div>
+            <div class="section-header">
+              <h2 class="section-title">Топ участников недели</h2>
+            </div>
+            <article class="card">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Имя</th>
+                    <th>Очки</th>
+                  </tr>
+                </thead>
+                <tbody id="home-leaderboard">
+                  <!-- JS заполнит таблицу; добавим skeleton -->
+                  <tr>
+                    <td>
+                      <div class="rank-pill skeleton"></div>
+                    </td>
+                    <td>
+                      <div class="skeleton skeleton-line" style="width: 90px"></div>
+                    </td>
+                    <td>
+                      <div class="skeleton skeleton-line" style="width: 40px"></div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="rank-pill skeleton"></div>
+                    </td>
+                    <td>
+                      <div class="skeleton skeleton-line" style="width: 80px"></div>
+                    </td>
+                    <td>
+                      <div class="skeleton skeleton-line" style="width: 48px"></div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="rank-pill skeleton"></div>
+                    </td>
+                    <td>
+                      <div class="skeleton skeleton-line" style="width: 70px"></div>
+                    </td>
+                    <td>
+                      <div class="skeleton skeleton-line" style="width: 40px"></div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </article>
+          </div>
+
+          <aside>
+            <div class="section-header">
+              <h2 class="section-title">Прогресс пользователей</h2>
+            </div>
+            <div class="progress-card">
+              <div class="progress-group">
+                <div class="progress-row">
+                  <span class="progress-label">Курсы пройдены</span>
+                  <span class="progress-value" id="progress-courses-label">0%</span>
+                </div>
+                <div class="progress-bar-track">
+                  <div
+                    class="progress-bar-fill"
+                    id="progress-courses-bar"
+                  ></div>
+                </div>
+              </div>
+
+              <div class="progress-group">
+                <div class="progress-row">
+                  <span class="progress-label">Задания выполнены</span>
+                  <span class="progress-value" id="progress-tasks-label">0%</span>
+                </div>
+                <div class="progress-bar-track">
+                  <div
+                    class="progress-bar-fill"
+                    id="progress-tasks-bar"
+                  ></div>
+                </div>
+              </div>
+
+              <div class="achievement">
+                <span class="achievement-emoji">🏆</span>
+                <span class="achievement-label">Мастер формулировки</span>
+                <div class="muted" style="font-size: 12px; margin-top: 2px">
+                  за 10 идеально структурированных промптов подряд
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div class="footer-brand">
+          <a href="./index.html" class="logo">
+            <div class="logo-mark" aria-hidden="true"></div>
+            <span class="logo-text"><span class="logo-name">Prompt</span> <span class="logo-name logo-name--academy">Academy</span></span>
+          </a>
+          <p class="footer-tagline">Платформа обучения промпт-инжинирингу</p>
+        </div>
+        <nav class="footer-nav">
+          <a href="./courses.html">Курсы</a>
+          <a href="./practice.html">Практика</a>
+          <a href="./library.html">Библиотека</a>
+          <a href="./leaderboard.html">Рейтинг</a>
+        </nav>
+        <div class="footer-bottom">
+          <span class="footer-copy">© 2026 Prompt Academy</span>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Guest modal -->
+    <div
+      class="backdrop"
+      id="auth-modal"
+      aria-hidden="true"
+    >
+      <div class="modal">
+        <h3 class="modal-title">Требуется вход в аккаунт</h3>
+        <p class="modal-body">
+          Чтобы использовать эту функцию, войдите в аккаунт. Это займёт меньше минуты.
+        </p>
+        <div class="modal-actions">
+          <button
+            class="btn btn-ghost"
+            data-modal-close
+          >
+            Позже
+          </button>
+          <a
+            href="./login.html"
+            class="btn btn-primary"
+          >
+            Войти
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="toast-container"
+      id="toast-container"
+    ></div>
+
+    <script type="module" src="./js/app.js"></script>
+    <script type="module" src="./js/leaderboard.js"></script>
+  </body>
+</html>
+

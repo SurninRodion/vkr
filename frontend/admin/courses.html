@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Админка — Курсы</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="page">
+    <header class="navbar">
+      <div class="container navbar-inner">
+        <div class="navbar-left">
+          <a href="../index.html" class="logo">
+            <div class="logo-mark" aria-hidden="true"></div>
+            <span class="logo-text"><span class="logo-name">Prompt</span> <span class="logo-name logo-name--academy">Academy</span></span>
+          </a>
+        </div>
+        <div class="navbar-right" id="navbar-right"></div>
+      </div>
+    </header>
+
+    <main class="layout-main">
+      <section class="container">
+        <div class="admin-layout">
+          <aside class="admin-sidebar">
+            <div class="admin-sidebar-title">Администрирование</div>
+            <a href="./dashboard.html" class="admin-sidebar-link">
+              <span>Dashboard</span>
+            </a>
+            <a href="./tasks.html" class="admin-sidebar-link">
+              <span>Задания</span>
+            </a>
+            <a href="./prompts.html" class="admin-sidebar-link">
+              <span>Библиотека промптов</span>
+            </a>
+            <a href="./courses.html" class="admin-sidebar-link admin-sidebar-link--active">
+              <span>Курсы</span>
+            </a>
+            <a href="./course-builder.html" class="admin-sidebar-link">
+              <span>Конструктор курса</span>
+            </a>
+            <a href="./users.html" class="admin-sidebar-link">
+              <span>Пользователи</span>
+            </a>
+          </aside>
+
+          <div class="admin-main">
+            <div class="admin-page-header">
+              <div>
+                <h1 class="admin-page-title">Курсы</h1>
+                <p class="admin-page-subtitle">
+                  Создание и редактирование курсов и их уроков.
+                </p>
+              </div>
+            </div>
+
+            <div class="admin-table-wrapper">
+              <h2 class="card-title" style="margin-bottom: 10px">Список курсов</h2>
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Название</th>
+                    <th>Описание</th>
+                    <th>Уроки</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="admin-courses-body"></tbody>
+              </table>
+            </div>
+
+            <div class="card">
+              <h3 class="card-title">Создание / редактирование курса</h3>
+              <form id="course-form" class="admin-form-grid">
+                <div class="form-field">
+                  <label class="form-label">Название курса</label>
+                  <input
+                    type="text"
+                    id="course-title"
+                    class="form-input"
+                    required
+                  />
+                </div>
+                <div class="form-field" style="grid-column: 1 / -1">
+                  <label class="form-label">Описание курса</label>
+                  <textarea
+                    id="course-description"
+                    class="textarea"
+                    rows="3"
+                  ></textarea>
+                </div>
+                <div class="form-field" style="grid-column: 1 / -1">
+                  <label class="form-label">Уроки</label>
+                  <p class="card-description" style="margin-bottom: 6px">
+                    Добавляйте уроки по одному. Каждый урок содержит название и произвольный
+                    контент.
+                  </p>
+                  <div id="lessons-container"></div>
+                  <button
+                    type="button"
+                    class="btn btn-outline"
+                    id="add-lesson-btn"
+                    style="margin-top: 8px"
+                  >
+                    Добавить урок
+                  </button>
+                </div>
+                <div class="admin-form-actions" style="grid-column: 1 / -1">
+                  <button type="submit" class="btn btn-primary" id="course-submit">
+                    Сохранить курс
+                  </button>
+                  <button type="button" class="btn btn-ghost" id="course-reset">
+                    Очистить форму
+                  </button>
+                  <span class="admin-badge-muted" id="course-form-mode">Режим: создание</span>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div class="footer-brand">
+          <a href="../index.html" class="logo">
+            <div class="logo-mark" aria-hidden="true"></div>
+            <span class="logo-text"><span class="logo-name">Prompt</span> <span class="logo-name logo-name--academy">Academy</span></span>
+          </a>
+          <p class="footer-tagline">Платформа обучения промпт-инжинирингу</p>
+        </div>
+        <nav class="footer-nav">
+          <a href="../courses.html">Курсы</a>
+          <a href="../practice.html">Практика</a>
+          <a href="../library.html">Библиотека</a>
+          <a href="../leaderboard.html">Рейтинг</a>
+        </nav>
+        <div class="footer-bottom">
+          <span class="footer-copy">© 2026 Prompt Academy</span>
+        </div>
+      </div>
+    </footer>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script type="module" src="../js/app.js"></script>
+    <script type="module" src="../js/admin/admin.js"></script>
+  </body>
+</html>
+

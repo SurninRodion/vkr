@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Админка — Задания</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="page">
+    <header class="navbar">
+      <div class="container navbar-inner">
+        <div class="navbar-left">
+          <a href="../index.html" class="logo">
+            <div class="logo-mark" aria-hidden="true"></div>
+            <span class="logo-text"><span class="logo-name">Prompt</span> <span class="logo-name logo-name--academy">Academy</span></span>
+          </a>
+        </div>
+        <div class="navbar-right" id="navbar-right"></div>
+      </div>
+    </header>
+
+    <main class="layout-main">
+      <section class="container">
+        <div class="admin-layout">
+          <aside class="admin-sidebar">
+            <div class="admin-sidebar-title">Администрирование</div>
+            <a href="./dashboard.html" class="admin-sidebar-link">
+              <span>Dashboard</span>
+            </a>
+            <a href="./tasks.html" class="admin-sidebar-link admin-sidebar-link--active">
+              <span>Задания</span>
+            </a>
+            <a href="./prompts.html" class="admin-sidebar-link">
+              <span>Библиотека промптов</span>
+            </a>
+            <a href="./courses.html" class="admin-sidebar-link">
+              <span>Курсы</span>
+            </a>
+            <a href="./users.html" class="admin-sidebar-link">
+              <span>Пользователи</span>
+            </a>
+          </aside>
+
+          <div class="admin-main">
+            <div class="admin-page-header">
+              <div>
+                <h1 class="admin-page-title">Задания</h1>
+                <p class="admin-page-subtitle">
+                  Просмотр, создание, редактирование и удаление заданий.
+                </p>
+              </div>
+              <div>
+                <button class="btn btn-outline" id="btn-import-json">Импорт JSON</button>
+              </div>
+            </div>
+
+            <div class="admin-table-wrapper">
+              <div class="admin-page-header" style="margin-bottom: 10px">
+                <div>
+                  <h2 class="card-title">Список заданий</h2>
+                  <p class="card-description">Все задания, доступные пользователям.</p>
+                </div>
+                <button class="btn btn-primary" id="btn-create-task">Новое задание</button>
+              </div>
+
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Название</th>
+                    <th>Сложность</th>
+                    <th>Баллы</th>
+                    <th>Тип</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="admin-tasks-body"></tbody>
+              </table>
+            </div>
+
+            <div class="card">
+              <h3 class="card-title">Создание / редактирование задания</h3>
+              <form id="task-form" class="admin-form-grid">
+                <div class="form-field">
+                  <label class="form-label">Название</label>
+                  <input
+                    type="text"
+                    name="title"
+                    id="task-title"
+                    class="form-input"
+                    required
+                  />
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Тип задания</label>
+                  <input
+                    type="text"
+                    name="type"
+                    id="task-type"
+                    class="form-input"
+                    placeholder="improvement / lesson / optimization"
+                    required
+                  />
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Сложность</label>
+                  <select name="difficulty" id="task-difficulty" class="form-input">
+                    <option value="easy">easy</option>
+                    <option value="medium" selected>medium</option>
+                    <option value="hard">hard</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Баллы</label>
+                  <input
+                    type="number"
+                    name="points"
+                    id="task-points"
+                    class="form-input"
+                    min="1"
+                    value="50"
+                    required
+                  />
+                </div>
+                <div class="form-field" style="grid-column: 1 / -1">
+                  <label class="form-label">Описание</label>
+                  <textarea
+                    name="description"
+                    id="task-description"
+                    class="textarea"
+                    rows="3"
+                    required
+                  ></textarea>
+                </div>
+                <div class="admin-form-actions" style="grid-column: 1 / -1">
+                  <button type="submit" class="btn btn-primary" id="task-submit">
+                    Сохранить задание
+                  </button>
+                  <button type="button" class="btn btn-ghost" id="task-reset">Очистить форму</button>
+                  <span class="admin-badge-muted" id="task-form-mode">Режим: создание</span>
+                </div>
+              </form>
+            </div>
+
+            <div class="card">
+              <h3 class="card-title">Генерация заданий через AI</h3>
+              <p class="card-description">
+                Введите тему, количество и сложность. Задания будут сгенерированы при помощи AI и
+                отправлены в эту же форму для последующего сохранения или импорта.
+              </p>
+              <form id="ai-generate-form" class="admin-form-grid">
+                <div class="form-field">
+                  <label class="form-label">Тема</label>
+                  <input
+                    type="text"
+                    id="ai-topic"
+                    class="form-input"
+                    placeholder="Например: промпт-инжиниринг для учителей"
+                    required
+                  />
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Количество заданий</label>
+                  <input
+                    type="number"
+                    id="ai-count"
+                    class="form-input"
+                    min="1"
+                    max="10"
+                    value="3"
+                  />
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Сложность</label>
+                  <select id="ai-difficulty" class="form-input">
+                    <option value="easy">easy</option>
+                    <option value="medium" selected>medium</option>
+                    <option value="hard">hard</option>
+                  </select>
+                </div>
+                <div class="admin-form-actions" style="grid-column: 1 / -1">
+                  <button type="submit" class="btn btn-outline" id="ai-generate-btn">
+                    Сгенерировать задания через AI
+                  </button>
+                </div>
+              </form>
+              <div id="ai-generated-tasks" style="margin-top: 10px"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div class="footer-brand">
+          <a href="../index.html" class="logo">
+            <div class="logo-mark" aria-hidden="true"></div>
+            <span class="logo-text"><span class="logo-name">Prompt</span> <span class="logo-name logo-name--academy">Academy</span></span>
+          </a>
+          <p class="footer-tagline">Платформа обучения промпт-инжинирингу</p>
+        </div>
+        <nav class="footer-nav">
+          <a href="../courses.html">Курсы</a>
+          <a href="../practice.html">Практика</a>
+          <a href="../library.html">Библиотека</a>
+          <a href="../leaderboard.html">Рейтинг</a>
+        </nav>
+        <div class="footer-bottom">
+          <span class="footer-copy">© 2026 Prompt Academy</span>
+        </div>
+      </div>
+    </footer>
+
+    <input type="file" id="import-file-input" accept="application/json" hidden />
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script type="module" src="../js/app.js"></script>
+    <script type="module" src="../js/admin/admin.js"></script>
+    <script type="module" src="../js/admin/adminTasks.js"></script>
+  </body>
+</html>
+

@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Лаборатория промптов — Prompt Academy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="./styles.css"
+    />
+  </head>
+  <body class="page">
+    <header class="navbar">
+      <div class="container navbar-inner">
+        <div class="navbar-left">
+          <a href="./index.html" class="logo">
+            <div class="logo-mark" aria-hidden="true"></div>
+            <span class="logo-text"><span class="logo-name">Prompt</span> <span class="logo-name logo-name--academy">Academy</span></span>
+          </a>
+          <nav class="navbar-menu">
+            <a href="./courses.html" class="nav-link" data-nav="courses">Курсы</a>
+            <a href="./practice.html" class="nav-link" data-nav="practice">Практика</a>
+            <a href="./library.html" class="nav-link" data-nav="library">Библиотека</a>
+            <a href="./leaderboard.html" class="nav-link" data-nav="leaderboard">Рейтинг</a>
+          </nav>
+        </div>
+        <div
+          class="navbar-right"
+          id="navbar-right"
+        ></div>
+      </div>
+    </header>
+
+    <main class="layout-main">
+      <section class="container">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Лаборатория промптов</h1>
+            <p class="page-header-meta">
+              Экспериментируйте с формулировками и сразу видьте, как меняется ответ ИИ.
+            </p>
+          </div>
+        </div>
+
+        <div class="lab-grid">
+          <div class="lab-left-column">
+            <section class="panel">
+              <div class="panel-title-row">
+                <div>
+                  <h2 class="panel-title">Редактор промпта</h2>
+                  <p class="panel-subtitle">
+                    Опишите задачу, аудиторию, формат ответа и ограничения.
+                  </p>
+                </div>
+              </div>
+
+              <textarea
+                class="textarea"
+                id="prompt-input"
+                placeholder="Например: Объясни, что такое нейросети, простым языком для старшеклассников..."
+              ></textarea>
+
+              <div class="panel-footer">
+                <div class="panel-footer-meta">
+                  <span id="prompt-hint">Гость: просмотр интерфейса без отправки промпта.</span>
+                </div>
+                <button
+                  class="btn btn-primary"
+                  id="generate-btn"
+                >
+                  Сгенерировать ответ
+                </button>
+              </div>
+            </section>
+
+            <section class="panel lab-assessment-panel">
+              <div class="panel-title-row">
+                <div>
+                  <h2 class="panel-title">Оценка промпта</h2>
+                  <p class="panel-subtitle">Метрики качества и комментарий.</p>
+                </div>
+              </div>
+
+              <ul
+                class="analysis-list"
+                id="prompt-analysis"
+              >
+                <li class="analysis-item">
+                  <span class="analysis-label">Структура</span>
+                  <span class="analysis-score" data-metric="structure">—</span>
+                </li>
+                <li class="analysis-item">
+                  <span class="analysis-label">Ясность</span>
+                  <span class="analysis-score" data-metric="clarity">—</span>
+                </li>
+                <li class="analysis-item">
+                  <span class="analysis-label">Конкретность</span>
+                  <span class="analysis-score" data-metric="specificity">—</span>
+                </li>
+                <li class="analysis-item">
+                  <span class="analysis-label">Эффективность</span>
+                  <span class="analysis-score" data-metric="effectiveness">—</span>
+                </li>
+              </ul>
+
+              <div id="analysis-comment-wrap" class="analysis-comment-wrap hidden">
+                <span class="analysis-comment-label">Комментарий к оценке:</span>
+                <p id="analysis-comment" class="analysis-comment"></p>
+              </div>
+            </section>
+          </div>
+
+          <section class="panel lab-generation-panel">
+            <div class="panel-title-row">
+              <div>
+                <h2 class="panel-title">Результат генерации</h2>
+                <p class="panel-subtitle">Ответ нейросети по вашему промпту.</p>
+              </div>
+              <div
+                class="loader-inline hidden"
+                id="lab-loader"
+              >
+                <span class="loader-dot"></span>
+                <span class="loader-dot"></span>
+                <span class="loader-dot"></span>
+              </div>
+            </div>
+
+            <div
+              id="ai-output"
+              class="ai-output ai-output-empty"
+            >
+              Напишите промпт слева и нажмите «Сгенерировать ответ».
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div class="footer-brand">
+          <a href="./index.html" class="logo">
+            <div class="logo-mark" aria-hidden="true"></div>
+            <span class="logo-text"><span class="logo-name">Prompt</span> <span class="logo-name logo-name--academy">Academy</span></span>
+          </a>
+          <p class="footer-tagline">Платформа обучения промпт-инжинирингу</p>
+        </div>
+        <nav class="footer-nav">
+          <a href="./courses.html">Курсы</a>
+          <a href="./practice.html">Практика</a>
+          <a href="./library.html">Библиотека</a>
+          <a href="./leaderboard.html">Рейтинг</a>
+        </nav>
+        <div class="footer-bottom">
+          <span class="footer-copy">© 2026 Prompt Academy</span>
+        </div>
+      </div>
+    </footer>
+
+    <div
+      class="backdrop"
+      id="auth-modal"
+      aria-hidden="true"
+    >
+      <div class="modal">
+        <h3 class="modal-title">Отправка промптов доступна после входа</h3>
+        <p class="modal-body">
+          Войдите или зарегистрируйтесь, чтобы отправлять промпты в лаборатории и сохранять
+          историю.
+        </p>
+        <div class="modal-actions">
+          <button
+            class="btn btn-ghost"
+            data-modal-close
+          >
+            Позже
+          </button>
+          <a
+            href="./login.html"
+            class="btn btn-primary"
+          >
+            Войти
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="toast-container"
+      id="toast-container"
+    ></div>
+
+    <script type="module" src="./js/app.js"></script>
+    <script type="module" src="./js/lab.js"></script>
+  </body>
+</html>
+

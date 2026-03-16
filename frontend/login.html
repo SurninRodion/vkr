@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Вход — Prompt Academy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="./styles.css"
+    />
+  </head>
+  <body class="page">
+    <div class="auth-wrapper">
+      <div class="auth-card">
+        <div class="auth-logo-row">
+          <a href="./index.html" class="logo">
+            <div class="logo-mark" aria-hidden="true"></div>
+            <span class="logo-text"><span class="logo-name">Prompt</span> <span class="logo-name logo-name--academy">Academy</span></span>
+          </a>
+        </div>
+        <h1 class="auth-title">Вход в аккаунт</h1>
+        <p class="auth-subtitle">Продолжайте обучение и возвращайтесь к своим заданиям.</p>
+
+        <form
+          class="auth-form"
+          id="login-form"
+        >
+          <div class="form-field">
+            <label
+              for="login-email"
+              class="form-label"
+              >Email</label
+            >
+            <input
+              id="login-email"
+              name="email"
+              type="email"
+              class="form-input"
+              autocomplete="email"
+              required
+            />
+          </div>
+          <div class="form-field">
+            <label
+              for="login-password"
+              class="form-label"
+              >Пароль</label
+            >
+            <input
+              id="login-password"
+              name="password"
+              type="password"
+              class="form-input"
+              autocomplete="current-password"
+              required
+            />
+          </div>
+
+          <div class="form-footer">
+            <div class="form-helper">
+              Используйте любой email и пароль — авторизация моковая.
+            </div>
+            <button
+              class="btn btn-primary"
+              type="submit"
+              id="login-submit"
+            >
+              Войти
+            </button>
+          </div>
+        </form>
+
+        <div class="form-alt">
+          Нет аккаунта?
+          <a href="./register.html">Зарегистрироваться</a>
+        </div>
+      </div>
+    </div>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div class="footer-brand">
+          <a href="./index.html" class="logo">
+            <div class="logo-mark" aria-hidden="true"></div>
+            <span class="logo-text"><span class="logo-name">Prompt</span> <span class="logo-name logo-name--academy">Academy</span></span>
+          </a>
+          <p class="footer-tagline">Платформа обучения промпт-инжинирингу</p>
+        </div>
+        <nav class="footer-nav">
+          <a href="./courses.html">Курсы</a>
+          <a href="./practice.html">Практика</a>
+          <a href="./library.html">Библиотека</a>
+          <a href="./leaderboard.html">Рейтинг</a>
+        </nav>
+        <div class="footer-bottom">
+          <span class="footer-copy">© 2026 Prompt Academy</span>
+        </div>
+      </div>
+    </footer>
+
+    <div
+      class="toast-container"
+      id="toast-container"
+    ></div>
+
+    <script type="module" src="./js/app.js"></script>
+    <script type="module" src="./js/auth.js"></script>
+  </body>
+</html>
+

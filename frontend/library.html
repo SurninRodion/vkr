@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Библиотека промптов — Prompt Academy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="page">
+    <header class="navbar">
+      <div class="container navbar-inner">
+        <div class="navbar-left">
+          <a href="./index.html" class="logo">
+            <div class="logo-mark" aria-hidden="true"></div>
+            <span class="logo-text"><span class="logo-name">Prompt</span> <span class="logo-name logo-name--academy">Academy</span></span>
+          </a>
+          <nav class="navbar-menu">
+            <a href="./courses.html" class="nav-link" data-nav="courses">Курсы</a>
+            <a href="./practice.html" class="nav-link" data-nav="practice">Практика</a>
+            <a href="./library.html" class="nav-link nav-link--active" data-nav="library"
+              >Библиотека</a
+            >
+            <a href="./leaderboard.html" class="nav-link" data-nav="leaderboard">Рейтинг</a>
+          </nav>
+        </div>
+        <div class="navbar-right" id="navbar-right"></div>
+      </div>
+    </header>
+
+    <main class="layout-main">
+      <section class="container">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Библиотека промптов</h1>
+            <p class="page-header-meta">
+              Готовые шаблоны для типичных задач: от объяснения тем до генерации кода.
+            </p>
+          </div>
+          <div class="filters">
+            <button class="chip chip--active" data-filter="all">Все</button>
+            <button class="chip" data-filter="learning">Обучение</button>
+            <button class="chip" data-filter="coding">Код</button>
+            <button class="chip" data-filter="style">Тон и стиль</button>
+          </div>
+        </div>
+
+        <div class="card-grid">
+          <article class="card" data-category="learning">
+            <div class="card-header">
+              <div class="card-icon">🧠</div>
+            </div>
+            <h3 class="card-title">Объясни сложную тему</h3>
+            <p class="card-description">
+              Шаблон для превращения сложной темы в понятное объяснение с примерами.
+            </p>
+            <div class="card-footer">
+              <span class="badge-soft">Обучение · структура</span>
+              <button class="btn btn-outline" data-action="guest-only">Использовать шаблон</button>
+            </div>
+          </article>
+
+          <article class="card" data-category="learning">
+            <div class="card-header">
+              <div class="card-icon">📋</div>
+            </div>
+            <h3 class="card-title">План урока</h3>
+            <p class="card-description">
+              Шаблон промпта для генерации плана занятия с целями, шагами и домашним заданием.
+            </p>
+            <div class="card-footer">
+              <span class="badge-soft">Обучение · сценарий</span>
+              <button class="btn btn-outline" data-action="guest-only">Использовать шаблон</button>
+            </div>
+          </article>
+
+          <article class="card" data-category="coding">
+            <div class="card-header">
+              <div class="card-icon">💻</div>
+            </div>
+            <h3 class="card-title">Объясни код по шагам</h3>
+            <p class="card-description">
+              Шаблон для разбора фрагмента кода с фокусом на логику и возможные ошибки.
+            </p>
+            <div class="card-footer">
+              <span class="badge-soft">Код · разбор</span>
+              <button class="btn btn-outline" data-action="guest-only">Использовать шаблон</button>
+            </div>
+          </article>
+
+          <article class="card" data-category="coding">
+            <div class="card-header">
+              <div class="card-icon">🧩</div>
+            </div>
+            <h3 class="card-title">Сгенерируй тесты</h3>
+            <p class="card-description">
+              Шаблон для генерации тест-кейсов по заданному сценарию или функции.
+            </p>
+            <div class="card-footer">
+              <span class="badge-soft">Код · тестирование</span>
+              <button class="btn btn-outline" data-action="guest-only">Использовать шаблон</button>
+            </div>
+          </article>
+
+          <article class="card" data-category="style">
+            <div class="card-header">
+              <div class="card-icon">🎯</div>
+            </div>
+            <h3 class="card-title">Подстрой тон ответа</h3>
+            <p class="card-description">
+              Шаблон для уточнения тона (формальный, дружелюбный, экспертный и т.п.).
+            </p>
+            <div class="card-footer">
+              <span class="badge-soft">Тон · стиль</span>
+              <button class="btn btn-outline" data-action="guest-only">Использовать шаблон</button>
+            </div>
+          </article>
+
+          <article class="card" data-category="style">
+            <div class="card-header">
+              <div class="card-icon">🧱</div>
+            </div>
+            <h3 class="card-title">Шаблон уточняющих вопросов</h3>
+            <p class="card-description">
+              Промпт, который просит ИИ сначала задать уточняющие вопросы, а затем ответить.
+            </p>
+            <div class="card-footer">
+              <span class="badge-soft">Диалог · уточнение</span>
+              <button class="btn btn-outline" data-action="guest-only">Использовать шаблон</button>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div class="footer-brand">
+          <a href="./index.html" class="logo">
+            <div class="logo-mark" aria-hidden="true"></div>
+            <span class="logo-text"><span class="logo-name">Prompt</span> <span class="logo-name logo-name--academy">Academy</span></span>
+          </a>
+          <p class="footer-tagline">Платформа обучения промпт-инжинирингу</p>
+        </div>
+        <nav class="footer-nav">
+          <a href="./courses.html">Курсы</a>
+          <a href="./practice.html">Практика</a>
+          <a href="./library.html">Библиотека</a>
+          <a href="./leaderboard.html">Рейтинг</a>
+        </nav>
+        <div class="footer-bottom">
+          <span class="footer-copy">© 2026 Prompt Academy</span>
+        </div>
+      </div>
+    </footer>
+
+    <div class="backdrop" id="auth-modal" aria-hidden="true">
+      <div class="modal">
+        <h3 class="modal-title">Использование шаблонов доступно после входа</h3>
+        <p class="modal-body">
+          Войдите или зарегистрируйтесь, чтобы сохранять и использовать шаблоны в лаборатории
+          промптов.
+        </p>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" data-modal-close>Позже</button>
+          <a href="./login.html" class="btn btn-primary">Войти</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script type="module" src="./js/app.js"></script>
+  </body>
+</html>
+
