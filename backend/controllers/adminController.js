@@ -361,6 +361,65 @@ async function deletePrompt(req, res) {
   }
 }
 
+function normalizeImportPromptCategory(cat) {
+  const s = String(cat ?? '')
+    .trim()
+    .toLowerCase();
+  if (['learning', 'coding', 'style', 'other'].includes(s)) return s;
+  if (s === 'обучение') return 'learning';
+  if (s === 'код' || s === 'code') return 'coding';
+  if (s === 'тон и стиль' || s.includes('тон')) return 'style';
+  return 'other';
+}
+
+async function importPrompts(req, res) {
+  try {
+    const { prompts } = req.body || {};
+
+    if (!Array.isArray(prompts) || prompts.length === 0) {
+      return res
+        .status(400)
+        .json({ message: 'Массив prompts обязателен и не может быть пустым' });
+    }
+
+    const stmt = db.prepare(
+      `
+        INSERT INTO prompt_library (id, title, category, description, example, analysis)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `
+    );
+
+    let imported = 0;
+    for (const p of prompts) {
+      if (!p || !p.title || !p.description) continue;
+      const id = uuidv4();
+      const category = normalizeImportPromptCategory(p.category);
+      const title = String(p.title).trim();
+      const description = String(p.description).trim();
+      const example = p.example != null ? String(p.example) : '';
+      const analysis = p.analysis != null ? String(p.analysis) : '';
+      stmt.run(id, title, category, description, example, analysis);
+      imported += 1;
+    }
+
+    stmt.finalize((err) => {
+      if (err) {
+        console.error('[AdminController] Error importing prompts:', err.message);
+        return res.status(500).json({ message: 'Ошибка импорта промптов' });
+      }
+      if (imported === 0) {
+        return res.status(400).json({
+          message: 'Ни одной записи не импортировано: у каждого элемента нужны непустые title и description'
+        });
+      }
+      return res.status(201).json({ message: 'Промпты импортированы', imported });
+    });
+  } catch (err) {
+    console.error('[AdminController] importPrompts error:', err.message);
+    return res.status(500).json({ message: 'Ошибка импорта промптов' });
+  }
+}
+
 // ===== COURSES =====
 
 function loadAttachmentsAndQuizForLessons(lessonIds, cb) {
@@ -1088,6 +1147,7 @@ module.exports = {
   createPrompt,
   updatePrompt,
   deletePrompt,
+  importPrompts,
   // Courses
   getCourses,
   createCourse,

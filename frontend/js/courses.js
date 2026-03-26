@@ -1,6 +1,6 @@
 import { apiGetCourses, apiGetMyCourses, apiEnrollCourse } from './api.js';
 import { getAuthState } from './auth.js';
-import { showToast } from './ui.js';
+import { showToast, initAuthGate } from './ui.js';
 
 function escapeHtml(s) {
   const div = document.createElement('div');
@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const grid = document.getElementById('courses-grid');
   const loadingEl = document.getElementById('courses-loading');
   if (!grid) return;
+
+  if (!initAuthGate()) return;
 
   try {
     const { isAuthenticated: token } = getAuthState();

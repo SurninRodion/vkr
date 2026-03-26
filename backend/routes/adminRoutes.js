@@ -10,6 +10,7 @@ const {
   importTasks,
   generateTasksAI,
   getPrompts,
+  importPrompts,
   createPrompt,
   updatePrompt,
   deletePrompt,
@@ -38,6 +39,7 @@ router.post('/tasks', createTask);
 router.put('/tasks/:id', updateTask);
 router.delete('/tasks/:id', deleteTask);
 router.post('/import/tasks', importTasks);
+router.post('/import/prompts', importPrompts);
 
 // Генерация заданий ИИ
 router.post('/tasks/generate-ai', generateTasksAI);

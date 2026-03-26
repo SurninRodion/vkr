@@ -80,7 +80,10 @@
     </header>
 
     <main class="layout-main">
-      <section class="hero">
+      <section
+        class="hero hero--guest"
+        id="hero-guest"
+      >
         <div class="container hero-grid">
           <div>
             <div class="eyebrow">
@@ -138,6 +141,93 @@
                     после 5 практических заданий
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section
+        class="hero hero--dashboard"
+        id="hero-dashboard"
+        hidden
+      >
+        <div class="container hero-dashboard-inner">
+          <div class="hero-dashboard-welcome">
+            <p class="hero-dashboard-eyebrow">Личный кабинет</p>
+            <h1
+              class="hero-dashboard-title"
+              id="hero-welcome-title"
+            >
+              С возвращением
+            </h1>
+            <p class="hero-dashboard-subtitle">
+              Продолжайте с того места, где остановились: курсы, задания и лаборатория.
+            </p>
+            <div class="hero-dashboard-cta">
+              <a
+                href="./courses.html"
+                class="btn btn-primary"
+                >К каталогу курсов</a
+              >
+              <a
+                href="./practice.html"
+                class="btn btn-outline"
+                >К практике</a
+              >
+            </div>
+          </div>
+
+          <div
+            class="hero-dashboard-aside"
+            aria-label="Быстрый доступ"
+          >
+            <div class="hero-dashboard-card">
+              <div class="hero-dashboard-card-head">
+                <span class="hero-dashboard-card-title">Быстрый доступ</span>
+                <span class="hero-dashboard-card-hint">Частые действия</span>
+              </div>
+              <div class="hero-dashboard-quick">
+                <a
+                  href="./courses.html"
+                  class="hero-dashboard-quick-link"
+                >
+                  <span class="hero-dashboard-quick-icon" aria-hidden="true">📚</span>
+                  <span class="hero-dashboard-quick-text">
+                    <span class="hero-dashboard-quick-label">Курсы</span>
+                    <span class="hero-dashboard-quick-desc">Уроки и прогресс</span>
+                  </span>
+                </a>
+                <a
+                  href="./practice.html"
+                  class="hero-dashboard-quick-link"
+                >
+                  <span class="hero-dashboard-quick-icon" aria-hidden="true">✅</span>
+                  <span class="hero-dashboard-quick-text">
+                    <span class="hero-dashboard-quick-label">Практика</span>
+                    <span class="hero-dashboard-quick-desc">Задания и очки</span>
+                  </span>
+                </a>
+                <a
+                  href="./lab.html"
+                  class="hero-dashboard-quick-link"
+                >
+                  <span class="hero-dashboard-quick-icon" aria-hidden="true">🧪</span>
+                  <span class="hero-dashboard-quick-text">
+                    <span class="hero-dashboard-quick-label">Лаборатория</span>
+                    <span class="hero-dashboard-quick-desc">Эксперименты с промптами</span>
+                  </span>
+                </a>
+                <a
+                  href="./profile.html"
+                  class="hero-dashboard-quick-link"
+                >
+                  <span class="hero-dashboard-quick-icon" aria-hidden="true">👤</span>
+                  <span class="hero-dashboard-quick-text">
+                    <span class="hero-dashboard-quick-label">Профиль</span>
+                    <span class="hero-dashboard-quick-desc">Статистика и настройки</span>
+                  </span>
+                </a>
               </div>
             </div>
           </div>

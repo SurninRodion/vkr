@@ -12,6 +12,7 @@ const promptRoutes = require('./routes/promptRoutes');
 const leaderboardRoutes = require('./routes/leaderboardRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 const courseRoutes = require('./routes/courseRoutes');
+const libraryRoutes = require('./routes/libraryRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
@@ -46,6 +47,7 @@ app.use('/api/prompts', promptRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/courses', courseRoutes);
+app.use('/api/library', libraryRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Корневой маршрут — отдать фронтенд

@@ -1,5 +1,5 @@
 import { apiLogin, apiRegister } from './api.js';
-import { showToast } from './ui.js';
+import { showToast } from './toast.js';
 
 const STORAGE_KEY = 'promptlearn_auth';
 
@@ -30,6 +30,7 @@ export function getCurrentUser() {
 export function logout() {
   setAuthState({ isAuthenticated: false, user: null, token: null });
   showToast('Вы вышли из аккаунта.', 'success');
+  window.location.href = '/index.html';
 }
 
 export async function login(email, password) {

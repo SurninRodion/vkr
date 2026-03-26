@@ -45,15 +45,17 @@ function renderProfile(root, profile, myCourses = []) {
     <div class="profile-main">
       <div class="profile-header">
         <div class="profile-avatar">
-          ${profile.name
-            .split(' ')
-            .map((p) => p[0])
-            .join('')
-            .slice(0, 2)}
+          ${escapeHtml(
+            profile.name
+              .split(' ')
+              .map((p) => p[0])
+              .join('')
+              .slice(0, 2)
+          )}
         </div>
         <div>
-          <div class="profile-name">${profile.name}</div>
-          <div class="profile-email">${profile.email}</div>
+          <div class="profile-name">${escapeHtml(profile.name)}</div>
+          <div class="profile-email">${escapeHtml(profile.email)}</div>
         </div>
       </div>
       <div class="stat-row">
@@ -71,43 +73,59 @@ function renderProfile(root, profile, myCourses = []) {
       ${myCoursesHtml}
     </div>
     <aside class="profile-side">
-      <div class="level-pill">
-        <span>🏆</span>
-        <span>${profile.level}</span>
+      <div class="profile-level-card" aria-label="Уровень на платформе">
+        <div class="profile-level-card-bg" aria-hidden="true"></div>
+        <div class="profile-level-card-inner">
+          <span class="profile-level-icon" aria-hidden="true">🏆</span>
+          <div class="profile-level-copy">
+            <span class="profile-level-label">Ваш уровень</span>
+            <span class="profile-level-name">${escapeHtml(profile.level)}</span>
+          </div>
+        </div>
       </div>
 
-      <form id="profile-form" class="profile-form">
-        <div class="form-group">
-          <label class="form-label" for="profile-name">Имя и фамилия</label>
-          <input
-            id="profile-name"
-            name="name"
-            class="input"
-            type="text"
-            value="${profile.name}"
-            autocomplete="name"
-          />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Email</label>
-          <input
-            class="input"
-            type="email"
-            value="${profile.email}"
-            disabled
-          />
-        </div>
-        <button class="btn btn-primary" type="submit" id="profile-save-btn">
-          Сохранить профиль
-        </button>
-      </form>
+      <section class="profile-side-section">
+        <h2 class="profile-side-heading">Настройки профиля</h2>
+        <p class="profile-side-lead">Имя видно в рейтинге и в сертификатах. Email изменить нельзя.</p>
+        <form id="profile-form" class="profile-form">
+          <div class="profile-form-field">
+            <label class="form-label" for="profile-name">Имя и фамилия</label>
+            <input
+              id="profile-name"
+              name="name"
+              class="form-input"
+              type="text"
+              value="${escapeHtml(profile.name)}"
+              autocomplete="name"
+            />
+          </div>
+          <div class="profile-form-field">
+            <label class="form-label" for="profile-email-readonly">Email</label>
+            <input
+              id="profile-email-readonly"
+              class="form-input form-input--disabled"
+              type="email"
+              value="${escapeHtml(profile.email)}"
+              disabled
+              readonly
+            />
+          </div>
+          <button class="btn btn-primary profile-form-submit" type="submit" id="profile-save-btn">
+            Сохранить изменения
+          </button>
+        </form>
+      </section>
 
-      <div style="margin-top: 16px; font-size: 13px">
-        <div class="muted">Достижения</div>
-        <ul style="margin: 6px 0 0; padding-left: 16px; font-size: 13px">
-          ${profile.achievements.map((a) => `<li>${a}</li>`).join('')}
-        </ul>
-      </div>
+      <section class="profile-side-section profile-side-section--achievements">
+        <h2 class="profile-side-heading">Достижения</h2>
+        ${
+          profile.achievements && profile.achievements.length > 0
+            ? `<ul class="profile-achievements-list">
+          ${profile.achievements.map((a) => `<li class="profile-achievement-item"><span class="profile-achievement-check" aria-hidden="true">✓</span><span>${escapeHtml(a)}</span></li>`).join('')}
+        </ul>`
+            : `<p class="profile-achievements-empty muted">Пока нет открытых достижений — решайте задания и проходите курсы.</p>`
+        }
+      </section>
     </aside>
   `;
 

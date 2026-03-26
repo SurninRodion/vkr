@@ -1,6 +1,6 @@
 import { apiGetTasks, apiGetCompletedTaskIds } from './api.js';
 import { getAuthState } from './auth.js';
-import { showToast } from './ui.js';
+import { showToast, initAuthGate } from './ui.js';
 
 const difficultyLabels = {
   easy: { text: 'Базовый', className: 'tag tag-green' },
@@ -90,6 +90,8 @@ function initFilters(allTasks, completedTaskIds = []) {
 document.addEventListener('DOMContentLoaded', async () => {
   const container = document.getElementById('tasks-list');
   if (!container) return;
+
+  if (!initAuthGate()) return;
 
   const { isAuthenticated } = getAuthState();
 

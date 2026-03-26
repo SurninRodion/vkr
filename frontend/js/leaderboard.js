@@ -1,4 +1,5 @@
 import { apiGetLeaderboard } from './api.js';
+import { initAuthGate } from './ui.js';
 
 function applyRankClass(index) {
   if (index === 0) return 'rank-pill rank-1';
@@ -44,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const homeTable = document.getElementById('home-leaderboard');
 
   if (table) {
+    if (!initAuthGate()) return;
     loadLeaderboard();
     const buttons = document.querySelectorAll('[data-period]');
     buttons.forEach((btn) => {

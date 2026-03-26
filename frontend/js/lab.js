@@ -31,6 +31,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const params = new URLSearchParams(window.location.search);
   const taskId = params.get('taskId') || null;
+  const urlPrompt = params.get('prompt');
+  if (!taskId && urlPrompt) {
+    try {
+      promptInput.value = decodeURIComponent(urlPrompt);
+    } catch {
+      promptInput.value = urlPrompt;
+    }
+  }
   let currentTask = null;
   let isCompletedView = false;
   const { isAuthenticated } = getAuthState();

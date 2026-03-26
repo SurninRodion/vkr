@@ -2,6 +2,15 @@ import { showToast } from '../ui.js';
 
 const ADMIN_API_BASE = '/api/admin';
 
+const CATEGORY_SLUGS = ['learning', 'coding', 'style', 'other'];
+
+const CATEGORY_LABELS = {
+  learning: 'Обучение',
+  coding: 'Код',
+  style: 'Тон и стиль',
+  other: 'Прочее'
+};
+
 function getAdminHeaders() {
   const headers = { 'Content-Type': 'application/json' };
 
@@ -19,6 +28,39 @@ function getAdminHeaders() {
   return headers;
 }
 
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str == null ? '' : String(str);
+  return div.innerHTML;
+}
+
+function formatCategoryCell(raw) {
+  const v = (raw || '').trim();
+  if (CATEGORY_LABELS[v]) return CATEGORY_LABELS[v];
+  return v || '—';
+}
+
+function setCategorySelect(value) {
+  const sel = document.getElementById('prompt-category');
+  if (!sel) return;
+  sel.querySelector('option[data-legacy]')?.remove();
+  const v = (value || '').trim();
+  if (CATEGORY_SLUGS.includes(v)) {
+    sel.value = v;
+    return;
+  }
+  if (v) {
+    const opt = document.createElement('option');
+    opt.value = v;
+    opt.textContent = v;
+    opt.dataset.legacy = '1';
+    sel.appendChild(opt);
+    sel.value = v;
+  } else {
+    sel.value = 'other';
+  }
+}
+
 async function loadPrompts() {
   const body = document.getElementById('admin-prompts-body');
   if (!body) return;
@@ -34,13 +76,13 @@ async function loadPrompts() {
     prompts.forEach((prompt) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${prompt.title}</td>
-        <td>${prompt.category || ''}</td>
+        <td>${escapeHtml(prompt.title)}</td>
+        <td>${escapeHtml(formatCategoryCell(prompt.category))}</td>
         <td>
-          <button class="btn btn-ghost" data-action="edit-prompt" data-id="${prompt.id}">
+          <button type="button" class="btn btn-ghost" data-action="edit-prompt" data-id="${escapeHtml(prompt.id)}">
             Редактировать
           </button>
-          <button class="btn btn-ghost" data-action="delete-prompt" data-id="${prompt.id}">
+          <button type="button" class="btn btn-ghost" data-action="delete-prompt" data-id="${escapeHtml(prompt.id)}">
             Удалить
           </button>
         </td>
@@ -48,27 +90,34 @@ async function loadPrompts() {
       body.appendChild(tr);
     });
 
-    body.addEventListener('click', async (e) => {
-      const btn = e.target.closest('button[data-action]');
-      if (!btn) return;
-      const id = btn.getAttribute('data-id');
-      const action = btn.getAttribute('data-action');
+    if (!body.dataset.promptsDelegateBound) {
+      body.dataset.promptsDelegateBound = '1';
+      body.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const id = btn.getAttribute('data-id');
+        const action = btn.getAttribute('data-action');
 
-      const latestRes = await fetch(`${ADMIN_API_BASE}/prompts`, {
-        headers: getAdminHeaders()
+        const latestRes = await fetch(`${ADMIN_API_BASE}/prompts`, {
+          headers: getAdminHeaders()
+        });
+        if (!latestRes.ok) {
+          showToast('Не удалось загрузить список промптов.', 'error');
+          return;
+        }
+        const latestPrompts = await latestRes.json();
+        const prompt = latestPrompts.find((p) => p.id === id);
+        if (!prompt) return;
+
+        if (action === 'edit-prompt') {
+          fillPromptForm(prompt);
+        } else if (action === 'delete-prompt') {
+          if (!confirm('Удалить промпт?')) return;
+          await deletePrompt(id);
+          await loadPrompts();
+        }
       });
-      const latestPrompts = await latestRes.json();
-      const prompt = latestPrompts.find((p) => p.id === id);
-      if (!prompt) return;
-
-      if (action === 'edit-prompt') {
-        fillPromptForm(prompt);
-      } else if (action === 'delete-prompt') {
-        if (!confirm('Удалить промпт?')) return;
-        await deletePrompt(id);
-        await loadPrompts();
-      }
-    });
+    }
   } catch (e) {
     console.error(e);
     showToast('Не удалось загрузить промпты.', 'error');
@@ -77,24 +126,15 @@ async function loadPrompts() {
 
 function fillPromptForm(prompt) {
   const titleEl = document.getElementById('prompt-title');
-  const categoryEl = document.getElementById('prompt-category');
   const descriptionEl = document.getElementById('prompt-description');
   const exampleEl = document.getElementById('prompt-example');
   const analysisEl = document.getElementById('prompt-analysis');
   const modeEl = document.getElementById('prompt-form-mode');
 
-  if (
-    !titleEl ||
-    !categoryEl ||
-    !descriptionEl ||
-    !exampleEl ||
-    !analysisEl ||
-    !modeEl
-  )
-    return;
+  if (!titleEl || !descriptionEl || !exampleEl || !analysisEl || !modeEl) return;
 
   titleEl.value = prompt.title || '';
-  categoryEl.value = prompt.category || '';
+  setCategorySelect(prompt.category);
   descriptionEl.value = prompt.description || '';
   exampleEl.value = prompt.example || '';
   analysisEl.value = prompt.analysis || '';
@@ -105,7 +145,10 @@ function fillPromptForm(prompt) {
 function resetPromptForm() {
   const form = document.getElementById('prompt-form');
   const modeEl = document.getElementById('prompt-form-mode');
+  const sel = document.getElementById('prompt-category');
+  sel?.querySelector('option[data-legacy]')?.remove();
   if (form) form.reset();
+  if (sel) sel.value = 'learning';
   if (modeEl) {
     modeEl.textContent = 'Режим: создание';
     delete modeEl.dataset.editId;
@@ -153,7 +196,7 @@ async function savePrompt(e) {
 
     const res = await fetch(url, {
       method,
-    headers: getAdminHeaders(),
+      headers: getAdminHeaders(),
       body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error('failed');
@@ -183,6 +226,36 @@ async function deletePrompt(id) {
   }
 }
 
+async function handleImportPromptsJson(file) {
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const prompts = Array.isArray(data.prompts) ? data.prompts : [];
+    if (!prompts.length) {
+      showToast('В файле нет промптов (нужен массив prompts).', 'error');
+      return;
+    }
+
+    const res = await fetch(`${ADMIN_API_BASE}/import/prompts`, {
+      method: 'POST',
+      headers: getAdminHeaders(),
+      body: JSON.stringify({ prompts })
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showToast(payload.message || 'Ошибка импорта JSON.', 'error');
+      return;
+    }
+    const n = typeof payload.imported === 'number' ? payload.imported : prompts.length;
+    showToast(`Импортировано промптов: ${n}.`, 'success');
+    await loadPrompts();
+  } catch (e) {
+    console.error(e);
+    showToast('Ошибка импорта JSON.', 'error');
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   if (!document.getElementById('admin-prompts-body')) return;
 
@@ -190,7 +263,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const form = document.getElementById('prompt-form');
   const resetBtn = document.getElementById('prompt-reset');
+  const importBtn = document.getElementById('btn-import-prompts-json');
+  const importInput = document.getElementById('import-prompts-file-input');
+
   if (form) form.addEventListener('submit', savePrompt);
   if (resetBtn) resetBtn.addEventListener('click', resetPromptForm);
-});
 
+  if (importBtn && importInput) {
+    importBtn.addEventListener('click', () => importInput.click());
+    importInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      handleImportPromptsJson(file);
+      importInput.value = '';
+    });
+  }
+});

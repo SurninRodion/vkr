@@ -56,10 +56,95 @@
                   Управление эталонными промптами, примерами и разбором.
                 </p>
               </div>
+              <div>
+                <button type="button" class="btn btn-outline" id="btn-import-prompts-json">
+                  Импорт JSON
+                </button>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3 class="card-title">Новый промпт в библиотеку</h3>
+                <p class="card-description" style="margin-bottom: 14px">
+                Заполните поля по аналогии с карточкой курса: сначала заголовок и тип, затем краткое
+                описание для каталога, затем текст промпта для копирования и пояснение для учеников.
+                После сохранения запись появится на публичной странице «Библиотека». Массовая загрузка —
+                кнопка «Импорт JSON» в шапке: файл с полем <code>prompts</code> (массив объектов с
+                обязательными <code>title</code> и <code>description</code>; опционально
+                <code>category</code> — learning, coding, style, other — <code>example</code>,
+                <code>analysis</code>).
+              </p>
+              <form id="prompt-form" class="admin-form-grid">
+                <div class="form-field">
+                  <label class="form-label">Название карточки</label>
+                  <input
+                    type="text"
+                    id="prompt-title"
+                    class="form-input"
+                    placeholder="Например: План урока за 5 минут"
+                    required
+                  />
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Категория (фильтр на сайте)</label>
+                  <select id="prompt-category" class="form-input" required>
+                    <option value="learning">Обучение</option>
+                    <option value="coding">Код</option>
+                    <option value="style">Тон и стиль</option>
+                    <option value="other">Прочее</option>
+                  </select>
+                </div>
+                <div class="form-field" style="grid-column: 1 / -1">
+                  <label class="form-label">Краткое описание</label>
+                  <p class="card-description" style="margin-bottom: 6px">
+                    Пара предложений: когда использовать шаблон и чем он полезен. Этот текст виден в
+                    списке библиотеки.
+                  </p>
+                  <textarea
+                    id="prompt-description"
+                    class="textarea"
+                    rows="3"
+                    required
+                  ></textarea>
+                </div>
+                <div class="form-field" style="grid-column: 1 / -1">
+                  <label class="form-label">Текст промпта (для копирования)</label>
+                  <p class="card-description" style="margin-bottom: 6px">
+                    Полный текст, который пользователь сможет вставить в лабораторию. Можно оставить
+                    плейсхолдеры в квадратных скобках.
+                  </p>
+                  <textarea
+                    id="prompt-example"
+                    class="textarea"
+                    rows="6"
+                    placeholder="Роль и контекст…&#10;Задача…&#10;Формат ответа…"
+                  ></textarea>
+                </div>
+                <div class="form-field" style="grid-column: 1 / -1">
+                  <label class="form-label">Разбор (по желанию)</label>
+                  <p class="card-description" style="margin-bottom: 6px">
+                    Почему промпт работает, на что обратить внимание — отображается в окне «Подробнее».
+                  </p>
+                  <textarea
+                    id="prompt-analysis"
+                    class="textarea"
+                    rows="4"
+                  ></textarea>
+                </div>
+                <div class="admin-form-actions" style="grid-column: 1 / -1">
+                  <button type="submit" class="btn btn-primary" id="prompt-submit">
+                    Сохранить в библиотеку
+                  </button>
+                  <button type="button" class="btn btn-ghost" id="prompt-reset">
+                    Очистить форму
+                  </button>
+                  <span class="admin-badge-muted" id="prompt-form-mode">Режим: создание</span>
+                </div>
+              </form>
             </div>
 
             <div class="admin-table-wrapper">
-              <h2 class="card-title" style="margin-bottom: 10px">Список промптов</h2>
+              <h2 class="card-title" style="margin-bottom: 10px">Сохранённые промпты</h2>
               <table class="table">
                 <thead>
                   <tr>
@@ -70,64 +155,6 @@
                 </thead>
                 <tbody id="admin-prompts-body"></tbody>
               </table>
-            </div>
-
-            <div class="card">
-              <h3 class="card-title">Создание / редактирование промпта</h3>
-              <form id="prompt-form" class="admin-form-grid">
-                <div class="form-field">
-                  <label class="form-label">Название</label>
-                  <input
-                    type="text"
-                    id="prompt-title"
-                    class="form-input"
-                    required
-                  />
-                </div>
-                <div class="form-field">
-                  <label class="form-label">Категория</label>
-                  <input
-                    type="text"
-                    id="prompt-category"
-                    class="form-input"
-                    placeholder="Например: обучение, маркетинг"
-                  />
-                </div>
-                <div class="form-field" style="grid-column: 1 / -1">
-                  <label class="form-label">Описание</label>
-                  <textarea
-                    id="prompt-description"
-                    class="textarea"
-                    rows="3"
-                    required
-                  ></textarea>
-                </div>
-                <div class="form-field" style="grid-column: 1 / -1">
-                  <label class="form-label">Пример промпта</label>
-                  <textarea
-                    id="prompt-example"
-                    class="textarea"
-                    rows="3"
-                  ></textarea>
-                </div>
-                <div class="form-field" style="grid-column: 1 / -1">
-                  <label class="form-label">Разбор</label>
-                  <textarea
-                    id="prompt-analysis"
-                    class="textarea"
-                    rows="3"
-                  ></textarea>
-                </div>
-                <div class="admin-form-actions" style="grid-column: 1 / -1">
-                  <button type="submit" class="btn btn-primary" id="prompt-submit">
-                    Сохранить промпт
-                  </button>
-                  <button type="button" class="btn btn-ghost" id="prompt-reset">
-                    Очистить форму
-                  </button>
-                  <span class="admin-badge-muted" id="prompt-form-mode">Режим: создание</span>
-                </div>
-              </form>
             </div>
           </div>
         </div>
@@ -154,6 +181,8 @@
         </div>
       </div>
     </footer>
+
+    <input type="file" id="import-prompts-file-input" accept="application/json" hidden />
 
     <div class="toast-container" id="toast-container"></div>
 

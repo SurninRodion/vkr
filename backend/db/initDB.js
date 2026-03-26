@@ -108,6 +108,44 @@ function initDB() {
           console.error('[DB] Error creating prompt_library table:', err.message);
         } else {
           console.log('[DB] prompt_library table ready');
+          db.get('SELECT COUNT(*) AS c FROM prompt_library', [], (countErr, row) => {
+            if (countErr) {
+              console.error('[DB] Error counting prompt_library:', countErr.message);
+              return;
+            }
+            if (row && row.c > 0) return;
+            const seedId = 'seed-prompt-library-demo-001';
+            db.run(
+              `
+                INSERT INTO prompt_library (id, title, category, description, example, analysis)
+                VALUES (?, ?, ?, ?, ?, ?)
+              `,
+              [
+                seedId,
+                'Объясни сложную тему простыми словами',
+                'learning',
+                'Шаблон для запроса к ИИ: сначала роль и контекст, затем цель, формат ответа и ограничения. Подходит для учебников, объяснений концепций и подготовки к экзаменам.',
+                `Ты — опытный преподаватель [дисциплина/уровень: например, физика 9 класс]. Объясни тему «[название темы]» так, чтобы её понял человек без глубокой подготовки.
+
+Структура ответа:
+1) Одной фразой — зачем эта тема важна.
+2) Ключевые термины — с короткими определениями.
+3) Пошаговое объяснение с примером из жизни или простой аналогией.
+4) Типичная ошибка, которую делают новички, и как её избежать.
+5) В конце — 3 проверочных вопроса с ответами.
+
+Пиши ясно, без лишней воды. Если нужны уточнения, задай до 3 вопросов, затем дай ответ.`,
+                `Почему структура работает: роль задаёт тон, формат — предсказуемый каркас ответа, пример/аналогия снижает когнитивную нагрузку, блок про ошибки — типичный приём в педагогике. Плейсхолдеры в квадратных скобках стоит заменить на свои данные — так промпт становится конкретным и проверяемым.`
+              ],
+              (seedErr) => {
+                if (seedErr) {
+                  console.error('[DB] Error seeding prompt_library:', seedErr.message);
+                } else {
+                  console.log('[DB] Seeded default prompt_library entry');
+                }
+              }
+            );
+          });
         }
       }
     );

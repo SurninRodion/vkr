@@ -1,4 +1,7 @@
 import { getAuthState, logout } from './auth.js';
+import { showToast } from './toast.js';
+
+export { showToast };
 
 function ensureMobileNavbarScaffold() {
   const navbarInner = document.querySelector('.navbar-inner');
@@ -218,8 +221,20 @@ window.addEventListener('auth:change', () => {
   initNavbar();
 });
 
-export function initGuestProtectedButtons() {
+/** На страницах с `.auth-gate-wrap` — стеклянная заглушка для гостя; без обёртки — no-op, возвращает `true`. */
+export function initAuthGate() {
+  const wrap = document.querySelector('.auth-gate-wrap');
+  if (!wrap) return true;
   const { isAuthenticated } = getAuthState();
+  const overlay = wrap.querySelector('.auth-gate__overlay');
+  if (!isAuthenticated) {
+    overlay?.removeAttribute('hidden');
+    wrap.classList.add('auth-gate-wrap--locked');
+  }
+  return isAuthenticated;
+}
+
+export function initGuestProtectedButtons() {
   const modal = document.getElementById('auth-modal');
   const closeButtons = modal?.querySelectorAll('[data-modal-close]');
 
@@ -241,7 +256,7 @@ export function initGuestProtectedButtons() {
   document.querySelectorAll('[data-action="guest-task"], [data-action="guest-only"]').forEach(
     (btn) => {
       btn.addEventListener('click', (e) => {
-        if (!isAuthenticated) {
+        if (!getAuthState().isAuthenticated) {
           e.preventDefault();
           openModal();
         }
@@ -252,7 +267,7 @@ export function initGuestProtectedButtons() {
   const heroStartBtn = document.getElementById('hero-start-btn');
   if (heroStartBtn) {
     heroStartBtn.addEventListener('click', (e) => {
-      if (!isAuthenticated) {
+      if (!getAuthState().isAuthenticated) {
         e.preventDefault();
         openModal();
       } else {
@@ -278,28 +293,6 @@ export function enforceLabAccess(generateBtn, promptHintEl) {
   } else {
     promptHintEl.textContent = 'Формулируйте промпт и отправляйте его в лабораторию.';
   }
-}
-
-export function showToast(message, type = 'success') {
-  const container = document.getElementById('toast-container');
-  if (!container) return;
-
-  const el = document.createElement('div');
-  el.className = `toast toast--${type}`;
-  el.innerHTML = `
-    <span>${message}</span>
-    <button class="toast-close" aria-label="Закрыть уведомление">×</button>
-  `;
-  container.appendChild(el);
-
-  const remove = () => {
-    if (!el.parentNode) return;
-    el.parentNode.removeChild(el);
-  };
-
-  el.querySelector('.toast-close')?.addEventListener('click', remove);
-
-  setTimeout(remove, 3500);
 }
 
 export function animateProgressBar(barEl, labelEl, value) {
