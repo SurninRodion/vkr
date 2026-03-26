@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const courseId = getCourseId();
   if (!courseId) {
-    root.innerHTML = '<p class="muted">Курс не выбран. <a href="./courses.html">Перейти к списку курсов</a></p>';
+    root.innerHTML = '<p class="muted">Курс не выбран. <a href="/courses">Перейти к списку курсов</a></p>';
     document.title = 'Курс — Prompt Academy';
     return;
   }
@@ -716,6 +716,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     attachContentListeners();
   } catch (e) {
     console.error(e);
-    root.innerHTML = '<p class="muted">Курс не найден или ошибка загрузки. <a href="./courses.html">К списку курсов</a></p>';
+    root.innerHTML = '<p class="muted">Курс не найден или ошибка загрузки. <a href="/courses">К списку курсов</a></p>';
   }
 });

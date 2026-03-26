@@ -26,8 +26,52 @@ app.use((req, res, next) => {
 app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
 app.use(express.json());
 
-// Статика фронтенда (обслуживание index.html и ассетов)
 const frontendPath = path.join(__dirname, '..', 'frontend');
+
+// 301: /page.html -> /page, /index.html и */index.html -> без «index» и без .html
+function redirectHtmlToCleanUrl(req, res, next) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+  if (!req.path.endsWith('.html')) return next();
+  if (req.path.startsWith('/api/') || req.path.startsWith('/uploads')) return next();
+
+  let clean = req.path.slice(0, -5);
+  if (clean === '/index' || clean === '') clean = '/';
+  else if (clean.endsWith('/index')) clean = clean.slice(0, -6) || '/';
+
+  const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+  return res.redirect(301, clean + qs);
+}
+
+// GET /courses -> courses.html, GET / -> index.html, GET /admin -> admin/index.html
+function serveExtensionlessHtml(req, res, next) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+  if (req.path.startsWith('/api/') || req.path.startsWith('/uploads')) return next();
+
+  const segments = req.path.split('/').filter(Boolean);
+  const last = segments[segments.length - 1];
+  if (last && last.includes('.')) return next();
+
+  if (req.path === '/' || req.path === '') {
+    return res.sendFile(path.join(frontendPath, 'index.html'));
+  }
+
+  const rel = req.path.replace(/^\/+/, '').replace(/\/+$/, '');
+  const base = path.join(frontendPath, rel);
+  const htmlFile = base + '.html';
+  if (fs.existsSync(htmlFile) && fs.statSync(htmlFile).isFile()) {
+    return res.sendFile(htmlFile);
+  }
+  const indexInDir = path.join(base, 'index.html');
+  if (fs.existsSync(indexInDir) && fs.statSync(indexInDir).isFile()) {
+    return res.sendFile(indexInDir);
+  }
+  next();
+}
+
+app.use(redirectHtmlToCleanUrl);
+app.use(serveExtensionlessHtml);
+
+// Статика фронтенда (CSS, JS, изображения)
 app.use(express.static(frontendPath));
 
 // Загруженные файлы курсов (изображения, документы)
@@ -49,11 +93,6 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/library', libraryRoutes);
 app.use('/api/admin', adminRoutes);
-
-// Корневой маршрут — отдать фронтенд
-app.get('/', (req, res) => {
-  res.sendFile(path.join(frontendPath, 'index.html'));
-});
 
 // Global error handler (fallback)
 app.use((err, req, res, next) => {

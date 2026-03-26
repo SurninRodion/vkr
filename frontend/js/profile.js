@@ -18,7 +18,7 @@ function renderProfile(root, profile, myCourses = []) {
         ${myCourses
           .map(
             (c) => `
-          <a href="./course.html?id=${encodeURIComponent(c.courseId)}" class="my-course-card">
+          <a href="/course?id=${encodeURIComponent(c.courseId)}" class="my-course-card">
             <div class="my-course-card-title">${escapeHtml(c.title)}</div>
             <div class="my-course-card-meta">
               <span class="my-course-progress">Прогресс: ${c.progressPercent}%</span>
@@ -37,7 +37,7 @@ function renderProfile(root, profile, myCourses = []) {
       : `
     <div class="profile-my-courses">
       <h2 class="section-title">Мои курсы</h2>
-      <p class="muted">Вы пока не записаны ни на один курс. <a href="./courses.html">Выбрать курс</a></p>
+      <p class="muted">Вы пока не записаны ни на один курс. <a href="/courses">Выбрать курс</a></p>
     </div>
   `;
 

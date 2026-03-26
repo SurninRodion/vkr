@@ -19,13 +19,13 @@ async function ensureAdminAccess() {
     const profile = await apiGetProfile();
     if (!profile || profile.role !== 'admin') {
       showToast('Доступ разрешён только администраторам.', 'error');
-      window.location.href = '../index.html';
+      window.location.href = '/';
       return false;
     }
     return true;
   } catch (e) {
     showToast('Не удалось проверить права доступа.', 'error');
-    window.location.href = '../login.html';
+    window.location.href = '/login';
     return false;
   }
 }

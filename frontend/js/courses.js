@@ -39,9 +39,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           const lessonsCount = c.lessonsCount != null ? c.lessonsCount : 0;
           const isEnrolled = enrolledIds.has(c.id);
           const mainBtn = isEnrolled
-            ? `<a href="./course.html?id=${encodeURIComponent(c.id)}" class="btn btn-primary">Открыть программу</a>`
+            ? `<a href="/course?id=${encodeURIComponent(c.id)}" class="btn btn-primary">Открыть программу</a>`
             : token
-              ? `<span class="course-card-actions"><a href="./course.html?id=${encodeURIComponent(c.id)}" class="btn btn-outline">Программа</a><button type="button" class="btn btn-primary" data-enroll="${encodeURIComponent(c.id)}">Записаться на курс</button></span>`
+              ? `<span class="course-card-actions"><a href="/course?id=${encodeURIComponent(c.id)}" class="btn btn-outline">Программа</a><button type="button" class="btn btn-primary" data-enroll="${encodeURIComponent(c.id)}">Записаться на курс</button></span>`
               : `<button type="button" class="btn btn-outline" data-action="guest-only">Открыть программу</button>`;
           return `
           <article class="card" data-course-id="${escapeHtml(c.id)}">
@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           showToast('Вы записаны на курс.', 'success');
           btn.replaceWith(
             Object.assign(document.createElement('a'), {
-              href: `./course.html?id=${encodeURIComponent(courseId)}`,
+              href: `/course?id=${encodeURIComponent(courseId)}`,
               className: 'btn btn-primary',
               textContent: 'Открыть программу',
             })

@@ -33,7 +33,7 @@ export function getCurrentUser() {
 export function logout() {
   setAuthState({ isAuthenticated: false, user: null, token: null });
   showToast('Вы вышли из аккаунта.', 'success');
-  window.location.href = '/index.html';
+  window.location.href = '/';
 }
 
 export async function login(email, password) {
@@ -44,7 +44,7 @@ export async function login(email, password) {
     const data = await apiLogin(email, password);
     setAuthState({ isAuthenticated: true, user: data.user, token: data.token });
     showToast('Добро пожаловать обратно 👋', 'success');
-    window.location.href = './index.html';
+    window.location.href = '/';
   } catch (e) {
     console.error(e);
     showToast('Не удалось войти. Попробуйте ещё раз.', 'error');
@@ -61,7 +61,7 @@ export async function register(payload) {
     const data = await apiRegister(payload);
     setAuthState({ isAuthenticated: true, user: data.user, token: data.token });
     showToast('Аккаунт создан. Добро пожаловать!', 'success');
-    window.location.href = './index.html';
+    window.location.href = '/';
   } catch (e) {
     console.error(e);
     showToast('Не удалось зарегистрироваться. Попробуйте ещё раз.', 'error');

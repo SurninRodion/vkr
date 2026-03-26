@@ -30,8 +30,8 @@ function badgeLabel(slug) {
 
 function labUrlForPrompt(text) {
   const t = (text || '').trim();
-  if (!t) return './lab.html';
-  return `./lab.html?prompt=${encodeURIComponent(t)}`;
+  if (!t) return '/lab';
+  return `/lab?prompt=${encodeURIComponent(t)}`;
 }
 
 function renderCards(container, items, activeFilter) {

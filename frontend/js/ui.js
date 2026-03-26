@@ -193,9 +193,9 @@ export function initNavbar() {
         if (!target) return;
         const action = target.getAttribute('data-mobile-menu');
         if (action === 'profile') {
-          window.location.href = './profile.html';
+          window.location.href = '/profile';
         } else if (action === 'admin') {
-          window.location.href = './admin/index.html';
+          window.location.href = '/admin';
         } else if (action === 'logout') {
           logout();
         }
@@ -222,9 +222,9 @@ export function initNavbar() {
         if (!target) return;
         const action = target.getAttribute('data-menu');
         if (action === 'profile') {
-          window.location.href = './profile.html';
+          window.location.href = '/profile';
         } else if (action === 'admin') {
-          window.location.href = './admin/index.html';
+          window.location.href = '/admin';
         } else if (action === 'logout') {
           dropdown.classList.remove('user-menu-dropdown--open');
           logout();
@@ -237,7 +237,7 @@ export function initNavbar() {
 
   document.querySelectorAll('[data-action="open-login"]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      window.location.href = './login.html';
+      window.location.href = '/login';
     });
   });
 }
@@ -297,7 +297,7 @@ export function initGuestProtectedButtons() {
         e.preventDefault();
         openModal();
       } else {
-        window.location.href = './practice.html';
+        window.location.href = '/practice';
       }
     });
   }

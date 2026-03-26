@@ -60,7 +60,7 @@ function renderTasks(tasks, completedTaskIds = []) {
       } else {
         showToast(`Задание «${task.title}» начато. Открываем лабораторию...`, 'success');
       }
-      const url = new URL(window.location.origin + '/lab.html');
+      const url = new URL(window.location.origin + '/lab');
       url.searchParams.set('taskId', task.id);
       window.location.href = url.toString();
     });

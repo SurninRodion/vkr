@@ -25,14 +25,14 @@ async function ensureAdminAccess() {
     const profile = await apiGetProfile();
     if (!profile || profile.role !== 'admin') {
       showToast('Доступ разрешён только администраторам.', 'error');
-      window.location.href = '../index.html';
+      window.location.href = '/';
       return false;
     }
     return true;
   } catch (e) {
     console.error(e);
     showToast('Не удалось проверить права доступа.', 'error');
-    window.location.href = '../login.html';
+    window.location.href = '/login';
     return false;
   }
 }
@@ -82,7 +82,7 @@ async function loadCourses() {
           <td>${escapeHtml(course.description || '')}</td>
           <td>${lessonsCount}</td>
           <td>
-            <a href="course-builder.html?id=${encodeURIComponent(course.id)}" class="btn btn-outline btn-sm">Конструктор</a>
+            <a href="/admin/course-builder?id=${encodeURIComponent(course.id)}" class="btn btn-outline btn-sm">Конструктор</a>
             <button class="btn btn-ghost" data-action="edit-course" data-id="${course.id}">Редактировать</button>
             <button class="btn btn-ghost" data-action="delete-course" data-id="${course.id}">Удалить</button>
           </td>
