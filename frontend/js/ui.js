@@ -107,7 +107,7 @@ export function initNavbar() {
   if (!guestWrap || !userWrap) {
     navbarRight.innerHTML = `
       <div class="navbar-auth-guest">${NAVBAR_GUEST_HTML}</div>
-      <div class="navbar-auth-user" hidden></div>
+      <div class="navbar-auth-user"></div>
     `;
     guestWrap = navbarRight.querySelector('.navbar-auth-guest');
     userWrap = navbarRight.querySelector('.navbar-auth-user');
@@ -127,10 +127,12 @@ export function initNavbar() {
   const { isAuthenticated, user } = getAuthState();
 
   if (!isAuthenticated) {
-    if (guestWrap) guestWrap.innerHTML = NAVBAR_GUEST_HTML;
+    if (guestWrap && !guestWrap.querySelector('[data-action="open-login"]')) {
+      guestWrap.innerHTML = NAVBAR_GUEST_HTML;
+    }
+
     if (userWrap) {
       userWrap.innerHTML = '';
-      userWrap.hidden = true;
     }
 
     if (mobileAuth) {
@@ -154,9 +156,7 @@ export function initNavbar() {
         `
       : '';
 
-    if (guestWrap) guestWrap.innerHTML = '';
     if (userWrap) {
-      userWrap.hidden = false;
       userWrap.innerHTML = `
       <div class="user-menu">
         <button class="btn btn-outline user-menu-toggle" id="user-menu-toggle">
