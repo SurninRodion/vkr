@@ -2,3 +2,6 @@
 backend/database.db
 
 backend/.env
+
+# Зависимости ставятся локально: npm install в backend/ (не коммитить)
+node_modules/
