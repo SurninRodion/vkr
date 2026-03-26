@@ -1,0 +1,4 @@
+# Локальная SQLite — на каждой машине своя, не коммитить
+backend/database.db
+
+backend/.env
