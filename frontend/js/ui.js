@@ -156,10 +156,10 @@ export function initNavbar() {
         `
       : '';
 
-    if (userWrap) {
+    if (userWrap && !userWrap.querySelector('.user-menu')) {
       userWrap.innerHTML = `
       <div class="user-menu">
-        <button class="btn btn-outline user-menu-toggle" id="user-menu-toggle">
+        <button type="button" class="btn btn-outline user-menu-toggle" id="user-menu-toggle">
           <span class="user-avatar">${initials}</span>
           <span>Личный кабинет</span>
         </button>
@@ -204,7 +204,8 @@ export function initNavbar() {
 
     const toggle = document.getElementById('user-menu-toggle');
     const dropdown = document.getElementById('user-menu-dropdown');
-    if (toggle && dropdown) {
+    if (toggle && dropdown && !toggle.dataset.menuBound) {
+      toggle.dataset.menuBound = '1';
       toggle.addEventListener('click', () => {
         dropdown.classList.toggle('user-menu-dropdown--open');
       });
