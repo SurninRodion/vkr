@@ -15,6 +15,9 @@ export function getAuthState() {
 
 function setAuthState(next) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  try {
+    document.documentElement.setAttribute('data-auth', next.isAuthenticated ? '1' : '0');
+  } catch (_) {}
   const event = new CustomEvent('auth:change', { detail: next });
   window.dispatchEvent(event);
 }

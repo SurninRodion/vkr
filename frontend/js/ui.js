@@ -93,9 +93,32 @@ function ensureMobileNavbarScaffold() {
   return { mobilePanel };
 }
 
+const NAVBAR_GUEST_HTML = `
+      <button class="btn btn-ghost" data-action="open-login">Профиль</button>
+      <button class="btn btn-primary" data-action="open-login">Войти</button>
+    `;
+
 export function initNavbar() {
   const navbarRight = document.getElementById('navbar-right');
   if (!navbarRight) return;
+
+  let guestWrap = navbarRight.querySelector('.navbar-auth-guest');
+  let userWrap = navbarRight.querySelector('.navbar-auth-user');
+  if (!guestWrap || !userWrap) {
+    navbarRight.innerHTML = `
+      <div class="navbar-auth-guest">${NAVBAR_GUEST_HTML}</div>
+      <div class="navbar-auth-user" hidden></div>
+    `;
+    guestWrap = navbarRight.querySelector('.navbar-auth-guest');
+    userWrap = navbarRight.querySelector('.navbar-auth-user');
+  }
+
+  try {
+    document.documentElement.setAttribute(
+      'data-auth',
+      getAuthState().isAuthenticated ? '1' : '0'
+    );
+  } catch (_) {}
 
   const scaffold = ensureMobileNavbarScaffold();
   const mobilePanel = scaffold?.mobilePanel || document.getElementById('navbar-mobile');
@@ -104,16 +127,14 @@ export function initNavbar() {
   const { isAuthenticated, user } = getAuthState();
 
   if (!isAuthenticated) {
-    navbarRight.innerHTML = `
-      <button class="btn btn-ghost" data-action="open-login">Профиль</button>
-      <button class="btn btn-primary" data-action="open-login">Войти</button>
-    `;
+    if (guestWrap) guestWrap.innerHTML = NAVBAR_GUEST_HTML;
+    if (userWrap) {
+      userWrap.innerHTML = '';
+      userWrap.hidden = true;
+    }
 
     if (mobileAuth) {
-      mobileAuth.innerHTML = `
-        <button class="btn btn-ghost" data-action="open-login">Профиль</button>
-        <button class="btn btn-primary" data-action="open-login">Войти</button>
-      `;
+      mobileAuth.innerHTML = NAVBAR_GUEST_HTML;
     }
   } else {
     const initials = user?.name
@@ -133,7 +154,10 @@ export function initNavbar() {
         `
       : '';
 
-    navbarRight.innerHTML = `
+    if (guestWrap) guestWrap.innerHTML = '';
+    if (userWrap) {
+      userWrap.hidden = false;
+      userWrap.innerHTML = `
       <div class="user-menu">
         <button class="btn btn-outline user-menu-toggle" id="user-menu-toggle">
           <span class="user-avatar">${initials}</span>
@@ -155,6 +179,7 @@ export function initNavbar() {
         </div>
       </div>
     `;
+    }
 
     if (mobileAuth) {
       mobileAuth.innerHTML = `
@@ -163,7 +188,7 @@ export function initNavbar() {
         <button class="btn btn-ghost" data-mobile-menu="logout">Выйти</button>
       `;
 
-      mobileAuth.addEventListener('click', (e) => {
+      mobileAuth.onclick = (e) => {
         const target = e.target.closest('[data-mobile-menu]');
         if (!target) return;
         const action = target.getAttribute('data-mobile-menu');
@@ -174,7 +199,7 @@ export function initNavbar() {
         } else if (action === 'logout') {
           logout();
         }
-      });
+      };
     }
 
     const toggle = document.getElementById('user-menu-toggle');

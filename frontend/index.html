@@ -2,6 +2,7 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
+    <script src="./js/auth-head.js"></script>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <title>Prompt Academy — Платформа обучения промпт-инжинирингу</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -58,23 +59,12 @@
             >
           </nav>
         </div>
-        <div
-          class="navbar-right"
-          id="navbar-right"
-        >
-          <!-- Guest mode buttons by default; JS will replace -->
-          <button
-            class="btn btn-ghost"
-            data-action="open-login"
-          >
-            Профиль
-          </button>
-          <button
-            class="btn btn-primary"
-            data-action="open-login"
-          >
-            Войти
-          </button>
+        <div class="navbar-right" id="navbar-right">
+          <div class="navbar-auth-guest">
+            <button class="btn btn-ghost" data-action="open-login">Профиль</button>
+            <button class="btn btn-primary" data-action="open-login">Войти</button>
+          </div>
+          <div class="navbar-auth-user" hidden></div>
         </div>
       </div>
     </header>
@@ -147,11 +137,7 @@
         </div>
       </section>
 
-      <section
-        class="hero hero--dashboard"
-        id="hero-dashboard"
-        hidden
-      >
+      <section class="hero hero--dashboard" id="hero-dashboard">
         <div class="container hero-dashboard-inner">
           <div class="hero-dashboard-welcome">
             <p class="hero-dashboard-eyebrow">Личный кабинет</p>

@@ -235,6 +235,30 @@ button {
   gap: 10px;
 }
 
+/* data-auth выставляет auth-head.js до отрисовки — без мигания кнопок навбара */
+html[data-auth="1"] .navbar-auth-guest {
+  display: none !important;
+}
+html[data-auth="0"] .navbar-auth-user {
+  display: none !important;
+}
+
+/* Главная: герой гостя / ЛК без переключения hidden в JS */
+html:not([data-auth]) #hero-dashboard,
+html[data-auth="0"] #hero-dashboard {
+  display: none !important;
+}
+html:not([data-auth]) #hero-guest,
+html[data-auth="0"] #hero-guest {
+  display: block !important;
+}
+html[data-auth="1"] #hero-guest {
+  display: none !important;
+}
+html[data-auth="1"] #hero-dashboard {
+  display: block !important;
+}
+
 .btn {
   border: none;
   border-radius: 999px;

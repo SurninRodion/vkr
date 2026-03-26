@@ -9,24 +9,14 @@ function firstNameFromUser(user) {
 }
 
 function initHomeHero() {
-  const guest = document.getElementById('hero-guest');
-  const dashboard = document.getElementById('hero-dashboard');
   const titleEl = document.getElementById('hero-welcome-title');
-  if (!guest || !dashboard) return;
+  if (!titleEl) return;
 
   const { isAuthenticated, user } = getAuthState();
+  if (!isAuthenticated) return;
 
-  if (isAuthenticated) {
-    guest.hidden = true;
-    dashboard.hidden = false;
-    if (titleEl) {
-      const first = firstNameFromUser(user);
-      titleEl.textContent = first ? `С возвращением, ${first}!` : 'С возвращением!';
-    }
-  } else {
-    guest.hidden = false;
-    dashboard.hidden = true;
-  }
+  const first = firstNameFromUser(user);
+  titleEl.textContent = first ? `С возвращением, ${first}!` : 'С возвращением!';
 }
 
 function initHomeProgress() {
