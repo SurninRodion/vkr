@@ -52,16 +52,18 @@
 
     <main class="layout-main">
       <section class="container">
-        <div class="page-header">
-          <div>
-            <h1 class="page-title">Лаборатория промптов</h1>
-            <p class="page-header-meta">
-              Экспериментируйте с формулировками и сразу видьте, как меняется ответ ИИ.
-            </p>
-          </div>
-        </div>
+        <div class="auth-gate-wrap">
+          <div class="auth-gate__content">
+            <div class="page-header">
+              <div>
+                <h1 class="page-title">Лаборатория промптов</h1>
+                <p class="page-header-meta">
+                  Экспериментируйте с формулировками и сразу видьте, как меняется ответ ИИ.
+                </p>
+              </div>
+            </div>
 
-        <div class="lab-grid">
+            <div class="lab-grid">
           <div class="lab-left-column">
             <section class="panel">
               <div class="panel-title-row">
@@ -81,7 +83,7 @@
 
               <div class="panel-footer">
                 <div class="panel-footer-meta">
-                  <span id="prompt-hint">Гость: просмотр интерфейса без отправки промпта.</span>
+                  <span id="prompt-hint">Формулируйте промпт и отправляйте его в лабораторию.</span>
                 </div>
                 <button
                   class="btn btn-primary"
@@ -153,6 +155,26 @@
             </div>
           </section>
         </div>
+          </div>
+
+          <div class="auth-gate__overlay" hidden>
+            <div class="auth-gate__panel">
+              <div class="auth-gate__icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.65" stroke="currentColor" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                </svg>
+              </div>
+              <h2 class="auth-gate__title">Лаборатория доступна после входа</h2>
+              <p class="auth-gate__text">
+                Войдите в аккаунт, чтобы отправлять промпты, получать ответы ИИ и выполнять практические задания.
+              </p>
+              <div class="auth-gate__actions">
+                <a href="/login" class="btn btn-primary">Войти</a>
+                <a href="/register" class="btn btn-outline">Регистрация</a>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
     </main>
 
@@ -176,34 +198,6 @@
         </div>
       </div>
     </footer>
-
-    <div
-      class="backdrop"
-      id="auth-modal"
-      aria-hidden="true"
-    >
-      <div class="modal">
-        <h3 class="modal-title">Отправка промптов доступна после входа</h3>
-        <p class="modal-body">
-          Войдите или зарегистрируйтесь, чтобы отправлять промпты в лаборатории и сохранять
-          историю.
-        </p>
-        <div class="modal-actions">
-          <button
-            class="btn btn-ghost"
-            data-modal-close
-          >
-            Позже
-          </button>
-          <a
-            href="/login"
-            class="btn btn-primary"
-          >
-            Войти
-          </a>
-        </div>
-      </div>
-    </div>
 
     <div
       class="toast-container"

@@ -35,6 +35,17 @@ function initDB() {
       }
     );
 
+    db.run(
+      "ALTER TABLE users ADD COLUMN last_seen_at TEXT",
+      (err) => {
+        if (err && !/duplicate column name/i.test(err.message)) {
+          console.error('[DB] Error adding last_seen_at to users table:', err.message);
+        } else if (!err) {
+          console.log('[DB] Added last_seen_at column to users table');
+        }
+      }
+    );
+
     db.run(`
       CREATE TABLE IF NOT EXISTS tasks (
         id TEXT PRIMARY KEY,
@@ -311,6 +322,32 @@ function initDB() {
           console.error('[DB] Error creating course_lesson_steps table:', err.message);
         } else {
           console.log('[DB] course_lesson_steps table ready');
+        }
+      }
+    );
+
+    // Ответы на практические шаги курса (текст + результат проверки GigaChat)
+    db.run(
+      `
+        CREATE TABLE IF NOT EXISTS course_practical_submissions (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          course_id TEXT NOT NULL,
+          lesson_id TEXT NOT NULL,
+          step_id TEXT NOT NULL,
+          submission_text TEXT NOT NULL,
+          ai_feedback TEXT,
+          score INTEGER,
+          updated_at TEXT DEFAULT (datetime('now')),
+          UNIQUE(user_id, course_id, lesson_id, step_id),
+          FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+      `,
+      (err) => {
+        if (err) {
+          console.error('[DB] Error creating course_practical_submissions table:', err.message);
+        } else {
+          console.log('[DB] course_practical_submissions table ready');
         }
       }
     );

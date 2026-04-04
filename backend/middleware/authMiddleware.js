@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../config');
-const { getUserById } = require('../models/userModel');
+const { getUserById, updateUserLastSeen } = require('../models/userModel');
 
 async function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -27,6 +27,8 @@ async function authMiddleware(req, res, next) {
       points: user.points,
       level: user.level
     };
+
+    void updateUserLastSeen(user.id).catch(() => {});
 
     next();
   } catch (err) {

@@ -1,14 +1,33 @@
 const { v4: uuidv4 } = require('uuid');
 const db = require('../db/db');
+const { analyzePrompt } = require('../utils/aiAnalyzer');
+
+function buildPracticalPromptForAi(payload, userText) {
+  const title = (payload.title || 'Практическое задание').trim();
+  const desc = (payload.description || '').trim();
+  const lines = ['Задание курса:', `Название: ${title}`];
+  if (desc) lines.push(`Описание задания:\n${desc}`);
+  lines.push('', 'Ответ пользователя:', String(userText).trim());
+  return lines.join('\n');
+}
 
 /**
- * Публичный список курсов (без уроков, только id, title, description, lessonsCount).
+ * Публичный список курсов (без уроков: id, title, description, lessonsCount, modulesCount).
  */
 function listCourses(req, res) {
   db.all(
     `
       SELECT c.id, c.title, c.description,
-             (SELECT COUNT(*) FROM course_lessons WHERE course_id = c.id) AS lessonsCount
+             (SELECT COUNT(*) FROM course_lessons WHERE course_id = c.id) AS lessonsCount,
+             (
+               CASE
+                 WHEN (SELECT COUNT(*) FROM course_modules WHERE course_id = c.id) > 0
+                 THEN (SELECT COUNT(*) FROM course_modules WHERE course_id = c.id)
+                 WHEN (SELECT COUNT(*) FROM course_lessons WHERE course_id = c.id) > 0
+                 THEN 1
+                 ELSE 0
+               END
+             ) AS modulesCount
       FROM courses c
       ORDER BY c.rowid DESC
     `,
@@ -18,7 +37,17 @@ function listCourses(req, res) {
         console.error('[CourseController] listCourses error:', err.message);
         return res.status(500).json({ message: 'Ошибка получения списка курсов' });
       }
-      res.json(courses || []);
+      const rows = courses || [];
+      // sqlite3 отдаёт алиасы иногда в нижнем регистре — приводим к стабильному JSON для клиента
+      res.json(
+        rows.map((row) => ({
+          id: row.id,
+          title: row.title,
+          description: row.description,
+          lessonsCount: Number(row.lessonsCount ?? row.lessonscount ?? 0),
+          modulesCount: Number(row.modulesCount ?? row.modulescount ?? 0),
+        }))
+      );
     }
   );
 }
@@ -403,7 +432,12 @@ function getCourseProgress(req, res) {
         return res.status(500).json({ message: 'Ошибка сервера' });
       }
       if (!enrollment) {
-        return res.json({ enrolled: false, completedLessonIds: [], totalLessons: 0 });
+        return res.json({
+          enrolled: false,
+          completedLessonIds: [],
+          totalLessons: 0,
+          practicalSubmissions: [],
+        });
       }
 
       db.all(
@@ -419,7 +453,8 @@ function getCourseProgress(req, res) {
             return res.json({
               enrolled: true,
               completedLessonIds: [],
-              totalLessons: 0
+              totalLessons: 0,
+              practicalSubmissions: [],
             });
           }
 
@@ -433,11 +468,141 @@ function getCourseProgress(req, res) {
                 return res.status(500).json({ message: 'Ошибка сервера' });
               }
               const completedLessonIds = (rows || []).map((r) => r.lesson_id);
-              res.json({
-                enrolled: true,
-                completedLessonIds,
-                totalLessons: lessonIds.length
-              });
+
+              db.all(
+                `SELECT lesson_id, step_id, submission_text, ai_feedback, score, updated_at
+                 FROM course_practical_submissions WHERE user_id = ? AND course_id = ?`,
+                [userId, courseId],
+                (err4, subRows) => {
+                  if (err4) {
+                    console.error('[CourseController] getCourseProgress practical error:', err4.message);
+                    return res.status(500).json({ message: 'Ошибка сервера' });
+                  }
+                  const practicalSubmissions = (subRows || []).map((r) => {
+                    let analysis = null;
+                    const raw = r.ai_feedback ?? r.AI_FEEDBACK;
+                    if (raw) {
+                      try {
+                        analysis = JSON.parse(raw);
+                      } catch {
+                        analysis = { aiResponse: String(raw) };
+                      }
+                    }
+                    return {
+                      lessonId: r.lesson_id ?? r.lessonid,
+                      stepId: r.step_id ?? r.stepid,
+                      submissionText: r.submission_text ?? r.submissiontext,
+                      analysis,
+                      score: r.score,
+                      updatedAt: r.updated_at ?? r.updatedat,
+                    };
+                  });
+
+                  res.json({
+                    enrolled: true,
+                    completedLessonIds,
+                    totalLessons: lessonIds.length,
+                    practicalSubmissions,
+                  });
+                }
+              );
+            }
+          );
+        }
+      );
+    }
+  );
+}
+
+/**
+ * Отправка ответа на практический шаг: проверка через GigaChat (как в разделе «Практика»), сохранение текста и фидбека.
+ */
+function submitPracticalStep(req, res) {
+  const userId = req.user.id;
+  const { courseId, lessonId, stepId } = req.params;
+  const { text } = req.body || {};
+  const trimmed = typeof text === 'string' ? text.trim() : '';
+  if (!trimmed) {
+    return res.status(400).json({ message: 'Передайте текст ответа (поле text)' });
+  }
+
+  db.get(
+    'SELECT id FROM course_enrollments WHERE user_id = ? AND course_id = ?',
+    [userId, courseId],
+    (err, enrollment) => {
+      if (err) {
+        console.error('[CourseController] submitPractical enroll:', err.message);
+        return res.status(500).json({ message: 'Ошибка сервера' });
+      }
+      if (!enrollment) {
+        return res.status(403).json({ message: 'Запишитесь на курс, чтобы отправлять ответы.' });
+      }
+
+      db.get(
+        'SELECT id FROM course_lessons WHERE id = ? AND course_id = ?',
+        [lessonId, courseId],
+        (err2, lesson) => {
+          if (err2) return res.status(500).json({ message: 'Ошибка сервера' });
+          if (!lesson) return res.status(404).json({ message: 'Урок не найден' });
+
+          db.get(
+            'SELECT id, step_type, payload FROM course_lesson_steps WHERE id = ? AND lesson_id = ?',
+            [stepId, lessonId],
+            async (err3, step) => {
+              if (err3) return res.status(500).json({ message: 'Ошибка сервера' });
+              if (!step) return res.status(404).json({ message: 'Шаг не найден' });
+              if (step.step_type !== 'practical') {
+                return res.status(400).json({ message: 'Этот шаг не является практическим заданием' });
+              }
+              let payload = {};
+              try {
+                payload = step.payload ? JSON.parse(step.payload) : {};
+              } catch (_) {}
+
+              const promptForAi = buildPracticalPromptForAi(payload, trimmed);
+              try {
+                const analysis = await analyzePrompt(promptForAi);
+                if (!analysis || typeof analysis.effectiveness !== 'number') {
+                  return res.status(503).json({
+                    message:
+                      'Проверка выполняется только через GigaChat. Проверьте GIGACHAT_CREDENTIALS или повторите позже.',
+                  });
+                }
+                const score = Math.max(0, Math.min(10, Math.round(analysis.effectiveness)));
+                const feedbackJson = JSON.stringify(analysis);
+
+                db.get(
+                  'SELECT id FROM course_practical_submissions WHERE user_id = ? AND course_id = ? AND lesson_id = ? AND step_id = ?',
+                  [userId, courseId, lessonId, stepId],
+                  (err4, existing) => {
+                    if (err4) {
+                      console.error('[CourseController] submitPractical select:', err4.message);
+                      return res.status(500).json({ message: 'Ошибка сохранения' });
+                    }
+                    const rowId = existing && existing.id ? existing.id : uuidv4();
+                    db.run(
+                      `INSERT OR REPLACE INTO course_practical_submissions (id, user_id, course_id, lesson_id, step_id, submission_text, ai_feedback, score, updated_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+                      [rowId, userId, courseId, lessonId, stepId, trimmed, feedbackJson, score],
+                      (err5) => {
+                        if (err5) {
+                          console.error('[CourseController] submitPractical insert:', err5.message);
+                          return res.status(500).json({ message: 'Ошибка сохранения' });
+                        }
+                        res.status(201).json({
+                          message: 'Ответ сохранён и проверен',
+                          submissionText: trimmed,
+                          analysis,
+                          score,
+                        });
+                      }
+                    );
+                  }
+                );
+              } catch (e) {
+                console.error('[CourseController] submitPractical AI:', e.message);
+                return res.status(500).json({ message: 'Ошибка проверки ответа' });
+              }
             }
           );
         }
@@ -494,5 +659,6 @@ module.exports = {
   submitQuiz,
   getMyCourses,
   getCourseProgress,
-  checkStepAnswer
+  checkStepAnswer,
+  submitPracticalStep,
 };

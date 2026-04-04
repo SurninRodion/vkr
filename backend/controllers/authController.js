@@ -2,7 +2,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { JWT_SECRET } = require('../config');
-const { getUserByEmail, createUser } = require('../models/userModel');
+const { getUserByEmail, createUser, updateUserLastSeen } = require('../models/userModel');
 
 const SALT_ROUNDS = 10;
 
@@ -36,6 +36,7 @@ async function register(req, res) {
     const id = uuidv4();
 
     const user = await createUser({ id, email, password_hash, name, role: 'user' });
+    void updateUserLastSeen(user.id).catch(() => {});
     const token = generateToken(user);
 
     console.log('[AuthController] User registered:', email);
@@ -77,6 +78,7 @@ async function login(req, res) {
     }
 
     const token = generateToken(user);
+    void updateUserLastSeen(user.id).catch(() => {});
 
     console.log('[AuthController] User logged in:', email);
 

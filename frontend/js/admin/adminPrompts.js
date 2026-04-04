@@ -40,6 +40,20 @@ function formatCategoryCell(raw) {
   return v || '—';
 }
 
+function getPromptFormPanel() {
+  return document.getElementById('admin-prompt-form-panel');
+}
+
+function showPromptFormPanel() {
+  const el = getPromptFormPanel();
+  if (el) el.hidden = false;
+}
+
+function hidePromptFormPanel() {
+  const el = getPromptFormPanel();
+  if (el) el.hidden = true;
+}
+
 function setCategorySelect(value) {
   const sel = document.getElementById('prompt-category');
   if (!sel) return;
@@ -73,22 +87,29 @@ async function loadPrompts() {
     const prompts = await res.json();
 
     body.innerHTML = '';
-    prompts.forEach((prompt) => {
+    if (!prompts.length) {
       const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${escapeHtml(prompt.title)}</td>
-        <td>${escapeHtml(formatCategoryCell(prompt.category))}</td>
+      tr.className = 'admin-tasks-empty-row';
+      tr.innerHTML = `<td colspan="3" class="admin-tasks-empty-cell">Пока нет сохранённых промптов. Нажмите «Новый промпт» или импортируйте JSON.</td>`;
+      body.appendChild(tr);
+    } else {
+      prompts.forEach((prompt) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+        <td class="admin-task-title-cell">
+          <span class="admin-task-title">${escapeHtml(prompt.title)}</span>
+        </td>
         <td>
-          <button type="button" class="btn btn-ghost" data-action="edit-prompt" data-id="${escapeHtml(prompt.id)}">
-            Редактировать
-          </button>
-          <button type="button" class="btn btn-ghost" data-action="delete-prompt" data-id="${escapeHtml(prompt.id)}">
-            Удалить
-          </button>
+          <span class="admin-badge-type">${escapeHtml(formatCategoryCell(prompt.category))}</span>
+        </td>
+        <td class="admin-task-actions-cell">
+          <button type="button" class="btn btn-outline btn-sm" data-action="edit-prompt" data-id="${escapeHtml(prompt.id)}">Редактировать</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-action="delete-prompt" data-id="${escapeHtml(prompt.id)}">Удалить</button>
         </td>
       `;
-      body.appendChild(tr);
-    });
+        body.appendChild(tr);
+      });
+    }
 
     if (!body.dataset.promptsDelegateBound) {
       body.dataset.promptsDelegateBound = '1';
@@ -140,9 +161,12 @@ function fillPromptForm(prompt) {
   analysisEl.value = prompt.analysis || '';
   modeEl.textContent = 'Режим: редактирование';
   modeEl.dataset.editId = prompt.id;
+
+  showPromptFormPanel();
+  getPromptFormPanel()?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function resetPromptForm() {
+function resetPromptFormFields() {
   const form = document.getElementById('prompt-form');
   const modeEl = document.getElementById('prompt-form-mode');
   const sel = document.getElementById('prompt-category');
@@ -153,6 +177,11 @@ function resetPromptForm() {
     modeEl.textContent = 'Режим: создание';
     delete modeEl.dataset.editId;
   }
+}
+
+function resetPromptForm() {
+  resetPromptFormFields();
+  hidePromptFormPanel();
 }
 
 async function savePrompt(e) {
@@ -268,6 +297,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (form) form.addEventListener('submit', savePrompt);
   if (resetBtn) resetBtn.addEventListener('click', resetPromptForm);
+
+  const newBtn = document.getElementById('btn-new-prompt');
+  if (newBtn) {
+    newBtn.addEventListener('click', () => {
+      resetPromptFormFields();
+      showPromptFormPanel();
+      document.getElementById('prompt-title')?.focus();
+      getPromptFormPanel()?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  }
 
   if (importBtn && importInput) {
     importBtn.addEventListener('click', () => importInput.click());

@@ -72,16 +72,52 @@
               </div>
             </div>
 
-            <div class="card">
+            <div class="admin-table-wrapper admin-tasks-panel">
+              <div class="admin-page-header" style="margin-bottom: 14px">
+                <div>
+                  <h2 class="card-title">Сохранённые промпты</h2>
+                  <p class="card-description">Все карточки, которые видят пользователи в разделе «Библиотека».</p>
+                </div>
+                <div>
+                  <button type="button" class="btn btn-primary" id="btn-new-prompt">Новый промпт</button>
+                </div>
+              </div>
+
+              <div class="admin-tasks-legend admin-tasks-legend--compact" role="note">
+                <div class="admin-tasks-legend-title">Обозначения колонок</div>
+                <ul class="admin-tasks-legend-list">
+                  <li><strong>Название</strong> — заголовок карточки в списке.</li>
+                  <li><strong>Категория</strong> — фильтр на сайте (обучение, код, тон и стиль, прочее).</li>
+                  <li><strong>Действия</strong> — редактирование или удаление записи.</li>
+                </ul>
+              </div>
+
+              <div class="admin-tasks-scroll">
+                <table class="admin-tasks-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Название</th>
+                      <th scope="col">Категория</th>
+                      <th scope="col" class="admin-tasks-col-actions">Действия</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-prompts-body"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card admin-prompt-form-panel" id="admin-prompt-form-panel" hidden>
               <h3 class="card-title">Новый промпт в библиотеку</h3>
                 <p class="card-description" style="margin-bottom: 14px">
-                Заполните поля по аналогии с карточкой курса: сначала заголовок и тип, затем краткое
+                Заполните поля по аналогии с карточкой курса: сначала заголовок и категорию, затем краткое
                 описание для каталога, затем текст промпта для копирования и пояснение для учеников.
                 После сохранения запись появится на публичной странице «Библиотека». Массовая загрузка —
-                кнопка «Импорт JSON» в шапке: файл с полем <code>prompts</code> (массив объектов с
-                обязательными <code>title</code> и <code>description</code>; опционально
-                <code>category</code> — learning, coding, style, other — <code>example</code>,
-                <code>analysis</code>).
+                кнопка «Импорт JSON» в шапке: в корне файла должен быть массив записей в поле
+                <code>prompts</code>. У каждой записи обязательны «название» и «краткое описание» (в
+                структуре JSON это ключи <code>title</code> и <code>description</code>). Дополнительно
+                можно указать «категорию» (<code>category</code>), «текст промпта» (<code>example</code>)
+                и «разбор» (<code>analysis</code>). Коды категорий в файле совпадают со значениями в
+                списке «Категория» в этой форме.
               </p>
               <form id="prompt-form" class="admin-form-grid">
                 <div class="form-field">
@@ -150,20 +186,6 @@
                   <span class="admin-badge-muted" id="prompt-form-mode">Режим: создание</span>
                 </div>
               </form>
-            </div>
-
-            <div class="admin-table-wrapper">
-              <h2 class="card-title" style="margin-bottom: 10px">Сохранённые промпты</h2>
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th>Название</th>
-                    <th>Категория</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody id="admin-prompts-body"></tbody>
-              </table>
             </div>
           </div>
         </div>

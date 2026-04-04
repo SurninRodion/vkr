@@ -46,7 +46,11 @@ const STEP_TYPES = {
 let state = {
   courses: [],
   currentCourse: null,
-  pendingStep: null
+  pendingStep: null,
+  /** Индекс модуля для модалки «Название модуля». */
+  pendingModuleIndex: null,
+  /** { mode: 'add'|'edit', modIndex: number, lessonIndex?: number } */
+  lessonModal: null
 };
 
 async function loadCourses() {
@@ -306,36 +310,148 @@ function getModulesFromState() {
   return buildVirtualModules(state.currentCourse);
 }
 
+function ensureModulesMaterialized() {
+  if (!state.currentCourse) return;
+  if (!state.currentCourse.modules) {
+    const virtual = buildVirtualModules(state.currentCourse);
+    state.currentCourse.modules = virtual.map((m) => ({ ...m, lessons: [...(m.lessons || [])] }));
+  }
+}
+
+function closeEditCourseModal() {
+  const backdrop = document.getElementById('modal-edit-course');
+  if (!backdrop) return;
+  backdrop.classList.remove('backdrop--visible');
+  backdrop.setAttribute('aria-hidden', 'true');
+}
+
 function openEditCourseModal() {
   const course = state.currentCourse;
-  const title = prompt('Название курса', course?.title || '');
-  if (title === null) return;
+  if (!course) return;
+  const titleIn = document.getElementById('builder-edit-course-title-input');
+  const descIn = document.getElementById('builder-edit-course-desc-input');
+  const backdrop = document.getElementById('modal-edit-course');
+  if (!titleIn || !descIn || !backdrop) return;
+  titleIn.value = course.title || '';
+  descIn.value = course.description || '';
+  backdrop.classList.add('backdrop--visible');
+  backdrop.setAttribute('aria-hidden', 'false');
+  setTimeout(() => titleIn.focus(), 0);
+}
+
+function applyEditCourseModal() {
   if (!state.currentCourse) state.currentCourse = { title: '', description: '', modules: [] };
-  state.currentCourse.title = title;
-  const desc = prompt('Описание курса', state.currentCourse.description || '');
-  if (desc !== null) state.currentCourse.description = desc;
+  const titleIn = document.getElementById('builder-edit-course-title-input');
+  const descIn = document.getElementById('builder-edit-course-desc-input');
+  if (!titleIn || !descIn) return;
+  state.currentCourse.title = titleIn.value.trim() || '';
+  state.currentCourse.description = descIn.value.trim() || '';
+  closeEditCourseModal();
   renderTree();
+}
+
+function closeEditModuleModal() {
+  const backdrop = document.getElementById('modal-edit-module');
+  if (!backdrop) return;
+  backdrop.classList.remove('backdrop--visible');
+  backdrop.setAttribute('aria-hidden', 'true');
+  state.pendingModuleIndex = null;
 }
 
 function openEditModuleModal(modIndex) {
   const modules = getModulesFromState();
   const mod = modules[modIndex];
   if (!mod) return;
-  const title = prompt('Название модуля', mod.title || '');
-  if (title === null) return;
-  mod.title = title;
+  const titleIn = document.getElementById('builder-module-title-input');
+  const backdrop = document.getElementById('modal-edit-module');
+  if (!titleIn || !backdrop) return;
+  state.pendingModuleIndex = modIndex;
+  titleIn.value = mod.title || '';
+  backdrop.classList.add('backdrop--visible');
+  backdrop.setAttribute('aria-hidden', 'false');
+  setTimeout(() => titleIn.focus(), 0);
+}
+
+function applyEditModuleModal() {
+  if (state.pendingModuleIndex == null) return;
+  ensureModulesMaterialized();
+  const mod = state.currentCourse.modules[state.pendingModuleIndex];
+  if (!mod) {
+    closeEditModuleModal();
+    return;
+  }
+  const titleIn = document.getElementById('builder-module-title-input');
+  if (!titleIn) return;
+  const title = titleIn.value.trim();
+  mod.title = title || mod.title;
+  closeEditModuleModal();
   renderTree();
+}
+
+function closeEditLessonModal() {
+  const backdrop = document.getElementById('modal-edit-lesson');
+  if (!backdrop) return;
+  backdrop.classList.remove('backdrop--visible');
+  backdrop.setAttribute('aria-hidden', 'true');
+  state.lessonModal = null;
 }
 
 function openEditLessonModal(modIndex, lessonIndex) {
   const modules = getModulesFromState();
   const lesson = modules[modIndex]?.lessons?.[lessonIndex];
   if (!lesson) return;
-  const title = prompt('Название урока', lesson.title || '');
-  if (title === null) return;
-  lesson.title = title;
-  const content = prompt('Краткое описание / контент (опционально)', lesson.content || '');
-  if (content !== null) lesson.content = content;
+  const titleIn = document.getElementById('builder-lesson-title-input');
+  const contentIn = document.getElementById('builder-lesson-content-input');
+  const heading = document.getElementById('modal-edit-lesson-heading');
+  const backdrop = document.getElementById('modal-edit-lesson');
+  if (!titleIn || !contentIn || !heading || !backdrop) return;
+  state.lessonModal = { mode: 'edit', modIndex, lessonIndex };
+  heading.textContent = 'Редактировать урок';
+  titleIn.value = lesson.title || '';
+  contentIn.value = lesson.content || '';
+  backdrop.classList.add('backdrop--visible');
+  backdrop.setAttribute('aria-hidden', 'false');
+  setTimeout(() => titleIn.focus(), 0);
+}
+
+function applyEditLessonModal() {
+  const ctx = state.lessonModal;
+  if (!ctx) return;
+  const titleIn = document.getElementById('builder-lesson-title-input');
+  const contentIn = document.getElementById('builder-lesson-content-input');
+  if (!titleIn || !contentIn) return;
+  const title = titleIn.value.trim();
+  const content = contentIn.value.trim();
+  if (!title) {
+    showToast('Укажите название урока.', 'error');
+    return;
+  }
+  ensureModulesMaterialized();
+  const mod = state.currentCourse.modules[ctx.modIndex];
+  if (!mod) {
+    closeEditLessonModal();
+    return;
+  }
+  if (ctx.mode === 'add') {
+    const newLesson = {
+      id: null,
+      title,
+      content,
+      order_index: (mod.lessons || []).length,
+      steps: []
+    };
+    if (!mod.lessons) mod.lessons = [];
+    mod.lessons.push(newLesson);
+  } else {
+    const lesson = mod.lessons?.[ctx.lessonIndex];
+    if (!lesson) {
+      closeEditLessonModal();
+      return;
+    }
+    lesson.title = title;
+    lesson.content = content;
+  }
+  closeEditLessonModal();
   renderTree();
 }
 
@@ -363,12 +479,18 @@ function addLesson(modIndex) {
   const modules = getModulesFromState();
   const mod = modules[modIndex];
   if (!mod) return;
-  const title = prompt('Название урока', '');
-  if (!title) return;
-  const newLesson = { id: null, title, content: '', order_index: (mod.lessons || []).length, steps: [] };
-  if (!mod.lessons) mod.lessons = [];
-  mod.lessons.push(newLesson);
-  renderTree();
+  const titleIn = document.getElementById('builder-lesson-title-input');
+  const contentIn = document.getElementById('builder-lesson-content-input');
+  const heading = document.getElementById('modal-edit-lesson-heading');
+  const backdrop = document.getElementById('modal-edit-lesson');
+  if (!titleIn || !contentIn || !heading || !backdrop) return;
+  state.lessonModal = { mode: 'add', modIndex };
+  heading.textContent = 'Новый урок';
+  titleIn.value = '';
+  contentIn.value = '';
+  backdrop.classList.add('backdrop--visible');
+  backdrop.setAttribute('aria-hidden', 'false');
+  setTimeout(() => titleIn.focus(), 0);
 }
 
 function deleteLesson(modIndex, lessonIndex) {
@@ -658,6 +780,30 @@ async function saveCourse() {
     if (btn) btn.disabled = false;
   }
 }
+
+const modalEditCourse = document.getElementById('modal-edit-course');
+modalEditCourse?.addEventListener('click', (e) => {
+  if (e.target === modalEditCourse || e.target.closest('[data-modal-edit-course-close]')) {
+    closeEditCourseModal();
+  }
+});
+document.getElementById('modal-edit-course-apply')?.addEventListener('click', applyEditCourseModal);
+
+const modalEditModule = document.getElementById('modal-edit-module');
+modalEditModule?.addEventListener('click', (e) => {
+  if (e.target === modalEditModule || e.target.closest('[data-modal-module-close]')) {
+    closeEditModuleModal();
+  }
+});
+document.getElementById('modal-edit-module-apply')?.addEventListener('click', applyEditModuleModal);
+
+const modalEditLesson = document.getElementById('modal-edit-lesson');
+modalEditLesson?.addEventListener('click', (e) => {
+  if (e.target === modalEditLesson || e.target.closest('[data-modal-lesson-close]')) {
+    closeEditLessonModal();
+  }
+});
+document.getElementById('modal-edit-lesson-apply')?.addEventListener('click', applyEditLessonModal);
 
 document.getElementById('modal-step-type')?.querySelectorAll('[data-modal-close]').forEach((el) => {
   el.addEventListener('click', () => document.getElementById('modal-step-type').classList.remove('backdrop--visible'));

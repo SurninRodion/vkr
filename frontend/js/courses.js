@@ -1,11 +1,20 @@
 import { apiGetCourses, apiGetMyCourses, apiEnrollCourse } from './api.js';
 import { getAuthState } from './auth.js';
+import { pluralRu } from './pluralize.js';
 import { showToast, initAuthGate } from './ui.js';
 
 function escapeHtml(s) {
   const div = document.createElement('div');
   div.textContent = s;
   return div.innerHTML;
+}
+
+/** Краткий текст для карточки списка (полное описание остаётся на странице курса). */
+function courseCardPreview(text, maxLen = 220) {
+  const t = (text || '').trim();
+  if (!t) return '';
+  if (t.length <= maxLen) return escapeHtml(t);
+  return `${escapeHtml(t.slice(0, maxLen))}…`;
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -36,7 +45,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     grid.innerHTML = courses
       .map(
         (c, i) => {
-          const lessonsCount = c.lessonsCount != null ? c.lessonsCount : 0;
+          const rawModules = c.modulesCount ?? c.modulescount;
+          const rawLessons = c.lessonsCount ?? c.lessonscount;
+          const modulesCount =
+            rawModules != null && rawModules !== ''
+              ? Number(rawModules)
+              : rawLessons > 0
+                ? 1
+                : 0;
           const isEnrolled = enrolledIds.has(c.id);
           const mainBtn = isEnrolled
             ? `<a href="/course?id=${encodeURIComponent(c.id)}" class="btn btn-primary">Открыть программу</a>`
@@ -46,11 +62,11 @@ document.addEventListener('DOMContentLoaded', async () => {
           return `
           <article class="card" data-course-id="${escapeHtml(c.id)}">
             <h3 class="card-title">${escapeHtml(c.title)}</h3>
-            <p class="card-description">${escapeHtml(c.description || '')}</p>
+            <p class="card-description">${courseCardPreview(c.description)}</p>
             <div class="task-card-meta">
               <div class="task-meta">
                 <span class="tag ${tagByIndex(i)}">${labelByIndex(i)}</span>
-                <span class="task-points">${lessonsCount} модулей</span>
+                <span class="task-points">${modulesCount} ${pluralRu(modulesCount, ['модуль', 'модуля', 'модулей'])}</span>
               </div>
               ${mainBtn}
             </div>

@@ -221,13 +221,13 @@
         </div>
       </section>
 
-      <section class="section">
+      <section class="section section--home-features">
         <div class="container">
           <div class="section-header">
             <h2 class="section-title">Основные возможности платформы</h2>
           </div>
-          <div class="card-grid">
-            <article class="card">
+          <div class="card-grid card-grid--home">
+            <a href="/courses" class="card home-feature-card">
               <div class="card-header">
                 <div class="card-icon">📚</div>
               </div>
@@ -235,16 +235,11 @@
               <p class="card-description">Обучающие модули от основ до продвинутых техник.</p>
               <div class="card-footer">
                 <span class="badge-soft">Пошаговые уроки</span>
-                <a
-                  href="/courses"
-                  class="muted"
-                >
-                  Подробнее →
-                </a>
+                <span class="muted home-card-cta">Подробнее →</span>
               </div>
-            </article>
+            </a>
 
-            <article class="card">
+            <a href="/practice" class="card home-feature-card">
               <div class="card-header">
                 <div class="card-icon">✅</div>
               </div>
@@ -252,16 +247,11 @@
               <p class="card-description">Задания и тренировки на реальных сценариях.</p>
               <div class="card-footer">
                 <span class="badge-soft">Разбор решений</span>
-                <a
-                  href="/practice"
-                  class="muted"
-                >
-                  К заданиям →
-                </a>
+                <span class="muted home-card-cta">К заданиям →</span>
               </div>
-            </article>
+            </a>
 
-            <article class="card">
+            <a href="/lab" class="card home-feature-card">
               <div class="card-header">
                 <div class="card-icon">🧪</div>
               </div>
@@ -269,76 +259,20 @@
               <p class="card-description">Песочница для экспериментов с промптами.</p>
               <div class="card-footer">
                 <span class="badge-soft">Живой фидбек</span>
-                <a
-                  href="/lab"
-                  class="muted"
-                >
-                  В лабораторию →
-                </a>
+                <span class="muted home-card-cta">В лабораторию →</span>
               </div>
-            </article>
+            </a>
           </div>
         </div>
       </section>
 
-      <section class="section">
+      <section class="section section--home-tasks">
         <div class="container">
           <div class="section-header">
             <h2 class="section-title">Популярные задания</h2>
-            <p class="section-subtitle">Примеры тренировок, которые ждут вас внутри.</p>
+            <p class="section-subtitle">Три задания с наибольшей наградой — клик по карточке открывает лабораторию.</p>
           </div>
-          <div class="card-grid">
-            <article class="card">
-              <h3 class="card-title">Улучши промпт</h3>
-              <p class="card-description">Исправь ошибочный запрос и повысь качество ответа.</p>
-              <div class="task-card-meta">
-                <div class="task-meta">
-                  <span class="tag tag-yellow">Средний уровень</span>
-                  <span class="task-points">+80 очков</span>
-                </div>
-                <button
-                  class="btn btn-outline"
-                  data-action="guest-task"
-                >
-                  Попробовать
-                </button>
-              </div>
-            </article>
-
-            <article class="card">
-              <h3 class="card-title">Промпт для урока</h3>
-              <p class="card-description">Создай промпт, который превратит тему в сценарий занятия.</p>
-              <div class="task-card-meta">
-                <div class="task-meta">
-                  <span class="tag tag-green">Базовый уровень</span>
-                  <span class="task-points">+50 очков</span>
-                </div>
-                <button
-                  class="btn btn-outline"
-                  data-action="guest-task"
-                >
-                  Попробовать
-                </button>
-              </div>
-            </article>
-
-            <article class="card">
-              <h3 class="card-title">Оптимизируй запрос</h3>
-              <p class="card-description">Сделай промпт короче без потери смысла.</p>
-              <div class="task-card-meta">
-                <div class="task-meta">
-                  <span class="tag tag-red">Продвинутый</span>
-                  <span class="task-points">+120 очков</span>
-                </div>
-                <button
-                  class="btn btn-outline"
-                  data-action="guest-task"
-                >
-                  Попробовать
-                </button>
-              </div>
-            </article>
-          </div>
+          <div class="card-grid card-grid--home" id="home-popular-tasks"></div>
         </div>
       </section>
 
@@ -496,6 +430,7 @@
     ></div>
 
     <script type="module" src="./js/app.js"></script>
+    <script type="module" src="./js/home.js"></script>
     <script type="module" src="./js/leaderboard.js"></script>
   </body>
 </html>

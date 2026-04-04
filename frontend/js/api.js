@@ -211,3 +211,18 @@ export async function apiGetCourseProgress(courseId) {
   });
 }
 
+/** Ответ на практический шаг курса: сохранение + проверка GigaChat (как в «Практике»). */
+export async function apiSubmitCoursePractical(courseId, lessonId, stepId, text) {
+  const data = await request(
+    `/courses/${encodeURIComponent(courseId)}/lessons/${encodeURIComponent(lessonId)}/steps/${encodeURIComponent(stepId)}/practical/submit`,
+    { method: 'POST', body: { text }, withAuth: true }
+  );
+  return {
+    submissionText: data.submissionText,
+    analysis: normalizeAnalysisToFive(data.analysis),
+    analysisRaw: data.analysis,
+    analysisComment: data.analysis?.aiResponse || null,
+    score: typeof data.score === 'number' ? data.score : null,
+  };
+}
+

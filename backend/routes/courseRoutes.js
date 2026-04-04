@@ -6,7 +6,8 @@ const {
   completeLesson,
   submitQuiz,
   getCourseProgress,
-  checkStepAnswer
+  checkStepAnswer,
+  submitPracticalStep,
 } = require('../controllers/courseController');
 const authMiddleware = require('../middleware/authMiddleware');
 
@@ -19,5 +20,10 @@ router.post('/:id/enroll', authMiddleware, enroll);
 router.post('/:courseId/lessons/:lessonId/complete', authMiddleware, completeLesson);
 router.post('/:courseId/lessons/:lessonId/quiz/submit', authMiddleware, submitQuiz);
 router.post('/:courseId/lessons/:lessonId/steps/:stepId/check', authMiddleware, checkStepAnswer);
+router.post(
+  '/:courseId/lessons/:lessonId/steps/:stepId/practical/submit',
+  authMiddleware,
+  submitPracticalStep
+);
 
 module.exports = router;

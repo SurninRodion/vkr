@@ -109,7 +109,7 @@ function getAllUsers() {
   return new Promise((resolve, reject) => {
     db.all(
       `
-        SELECT id, name, email, points, level, role, created_at
+        SELECT id, name, email, points, level, role, created_at, last_seen_at
         FROM users
         ORDER BY created_at DESC
       `,
@@ -120,6 +120,22 @@ function getAllUsers() {
           return reject(err);
         }
         resolve(rows);
+      }
+    );
+  });
+}
+
+function updateUserLastSeen(userId) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      `UPDATE users SET last_seen_at = datetime('now') WHERE id = ?`,
+      [userId],
+      function (err) {
+        if (err) {
+          console.error('[UserModel] Error updating last_seen_at:', err.message);
+          return reject(err);
+        }
+        resolve();
       }
     );
   });
@@ -172,6 +188,7 @@ module.exports = {
   updateUserProfile,
   getLeaderboard,
   getAllUsers,
+  updateUserLastSeen,
   updateUserRole,
   deleteUser
 };

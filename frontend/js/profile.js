@@ -1,5 +1,6 @@
 import { apiGetProfile, apiUpdateProfile, apiGetMyCourses } from './api.js';
 import { getAuthState } from './auth.js';
+import { pluralRu } from './pluralize.js';
 import { showToast } from './ui.js';
 
 function escapeHtml(s) {
@@ -22,7 +23,7 @@ function renderProfile(root, profile, myCourses = []) {
             <div class="my-course-card-title">${escapeHtml(c.title)}</div>
             <div class="my-course-card-meta">
               <span class="my-course-progress">Прогресс: ${c.progressPercent}%</span>
-              <span class="my-course-lessons">${c.completedLessons}/${c.totalLessons} уроков</span>
+              <span class="my-course-lessons">${c.completedLessons}/${c.totalLessons} ${pluralRu(c.totalLessons, ['урок', 'урока', 'уроков'])}</span>
             </div>
             <div class="progress-bar-track progress-bar-track--sm">
               <div class="progress-bar-fill" style="transform: scaleX(${c.progressPercent / 100})"></div>
@@ -86,7 +87,7 @@ function renderProfile(root, profile, myCourses = []) {
 
       <section class="profile-side-section">
         <h2 class="profile-side-heading">Настройки профиля</h2>
-        <p class="profile-side-lead">Имя видно в рейтинге и в сертификатах. Email изменить нельзя.</p>
+        <p class="profile-side-lead">Имя видно в рейтинге. Email изменить нельзя.</p>
         <form id="profile-form" class="profile-form">
           <div class="profile-form-field">
             <label class="form-label" for="profile-name">Имя и фамилия</label>

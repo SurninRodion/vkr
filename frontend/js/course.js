@@ -5,8 +5,11 @@ import {
   apiCompleteLesson,
   apiSubmitQuiz,
   apiCheckStepAnswer,
+  apiSubmitCoursePractical,
+  normalizeAnalysisToFive,
 } from './api.js';
 import { getAuthState } from './auth.js';
+import { pluralRu } from './pluralize.js';
 import { showToast } from './ui.js';
 
 function escapeHtml(s) {
@@ -19,7 +22,40 @@ function nl2br(s) {
   return String(s ?? '').replace(/\n/g, '<br>');
 }
 
-function renderStepBlock(step, stepIndex, lessonId, courseId) {
+function buildPracticalMap(progress) {
+  const m = new Map();
+  (progress.practicalSubmissions || []).forEach((p) => {
+    if (p.lessonId && p.stepId) m.set(`${p.lessonId}::${p.stepId}`, p);
+  });
+  return m;
+}
+
+/** Панель с сохранённым ответом и результатом проверки GigaChat (как метрики в «Практике»). */
+function renderPracticalFeedbackPanel(saved) {
+  if (!saved || !saved.submissionText) return '';
+  const a = saved.analysis || {};
+  const metrics = normalizeAnalysisToFive(a);
+  const comment = escapeHtml(a.aiResponse || '');
+  const suggestions = escapeHtml(a.suggestions || '');
+  const when = saved.updatedAt
+    ? escapeHtml(new Date(saved.updatedAt).toLocaleString('ru-RU'))
+    : '';
+  return `
+    <div class="lesson-practical-feedback-inner">
+      ${when ? `<p class="lesson-practical-feedback-meta">Сохранено: ${when}</p>` : ''}
+      <div class="lesson-practical-metrics" aria-label="Оценки по ответу">
+        <span class="lesson-practical-metric">Ясность: <strong>${metrics.clarity}</strong>/5</span>
+        <span class="lesson-practical-metric">Структура: <strong>${metrics.structure}</strong>/5</span>
+        <span class="lesson-practical-metric">Конкретика: <strong>${metrics.specificity}</strong>/5</span>
+        <span class="lesson-practical-metric">Эффективность: <strong>${metrics.effectiveness}</strong>/5</span>
+      </div>
+      ${comment ? `<p class="lesson-practical-comment">${comment}</p>` : ''}
+      ${suggestions ? `<p class="lesson-practical-suggestions"><span class="lesson-practical-suggestions-label">Рекомендации:</span> ${suggestions}</p>` : ''}
+    </div>
+  `;
+}
+
+function renderStepBlock(step, stepIndex, lessonId, courseId, practicalSaved, progress, isAuthenticated) {
   const p = step.payload || {};
   const stepId = escapeHtml(step.id);
   const type = step.step_type || 'theory';
@@ -60,13 +96,38 @@ function renderStepBlock(step, stepIndex, lessonId, courseId) {
         <p class="lesson-step-result" data-step-id="${stepId}" style="display:none;"></p>
       `;
       break;
-    case 'practical':
+    case 'practical': {
+      const feedbackHtml = practicalSaved ? renderPracticalFeedbackPanel(practicalSaved) : '';
+      let enrollHint = '';
+      if (!isAuthenticated) {
+        enrollHint =
+          '<p class="muted lesson-practical-hint">Войдите и запишитесь на курс, чтобы отправить ответ на проверку.</p>';
+      } else if (!progress.enrolled) {
+        enrollHint = '<p class="muted lesson-practical-hint">Запишитесь на курс, чтобы отправить ответ.</p>';
+      }
+      const hasSubmitted =
+        !!(practicalSaved && (practicalSaved.submissionText || practicalSaved.analysis));
+      const submitBtn =
+        progress.enrolled && isAuthenticated
+          ? hasSubmitted
+            ? `<button type="button" class="btn btn-outline btn-sm lesson-practical-retry" data-course-id="${escapeHtml(courseId)}" data-lesson-id="${escapeHtml(lessonId)}" data-step-id="${stepId}">Попробовать ещё раз</button>`
+            : `<button type="button" class="btn btn-primary btn-sm lesson-practical-submit" data-course-id="${escapeHtml(courseId)}" data-lesson-id="${escapeHtml(lessonId)}" data-step-id="${stepId}">Отправить на проверку</button>`
+          : '';
+      const taLocked = hasSubmitted ? ' readonly class="lesson-step-practical-input form-input textarea lesson-step-practical-input--locked"' : ' class="lesson-step-practical-input form-input textarea"';
       inner = `
-        <h4 class="lesson-step-title">${escapeHtml(p.title || 'Практическое задание')}</h4>
-        <div class="lesson-step-content">${nl2br(p.description || '')}</div>
-        <textarea class="lesson-step-practical-input form-input textarea" rows="4" placeholder="${escapeHtml(p.input_placeholder || 'Введите ваш ответ...')}"></textarea>
+        <div class="lesson-step-practical-wrap">
+          <h4 class="lesson-step-title">${escapeHtml(p.title || 'Практическое задание')}</h4>
+          <div class="lesson-step-content">${nl2br(p.description || '')}</div>
+          <textarea rows="4" placeholder="${escapeHtml(p.input_placeholder || 'Введите ваш ответ...')}"${taLocked}>${escapeHtml(practicalSaved?.submissionText || '')}</textarea>
+          <div class="lesson-step-practical-actions">
+            ${submitBtn}
+            ${enrollHint}
+          </div>
+          <div class="lesson-step-practical-feedback">${feedbackHtml}</div>
+        </div>
       `;
       break;
+    }
     default:
       inner = `<div class="lesson-step-content">${escapeHtml(JSON.stringify(p))}</div>`;
   }
@@ -78,11 +139,22 @@ function renderStepBlock(step, stepIndex, lessonId, courseId) {
   `;
 }
 
-function renderLessonSteps(lesson, lessonIndex, courseId, progress, completedSet, onlyStepId = null) {
+function renderLessonSteps(
+  lesson,
+  lessonIndex,
+  courseId,
+  progress,
+  completedSet,
+  onlyStepId = null,
+  practicalMap = null,
+  isAuthenticated = false
+) {
   const steps = (lesson.steps || []).slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
   if (!steps.length) return '';
+  const map = practicalMap || new Map();
   const stepsHtml = steps.map((s, i) => {
-    const block = renderStepBlock(s, i, lesson.id, courseId);
+    const saved = map.get(`${lesson.id}::${s.id}`);
+    const block = renderStepBlock(s, i, lesson.id, courseId, saved, progress, isAuthenticated);
     if (onlyStepId && s.id !== onlyStepId) {
       return block.replace('<div class="lesson-step-block"', '<div class="lesson-step-block" style="display:none"');
     }
@@ -143,6 +215,117 @@ function getStepLabel(step) {
   return title ? `${label}: ${typeof title === 'string' && title.length > 40 ? title.slice(0, 40) + '…' : title}` : label;
 }
 
+function getModuleParamForEntry(entry) {
+  if (!entry) return '';
+  const { moduleId, moduleIndex } = entry;
+  if (moduleId != null && moduleId !== '') return moduleId;
+  return `m${(moduleIndex || 1) - 1}`;
+}
+
+function truncateNavLabel(s, max = 40) {
+  const t = (s || '').trim();
+  if (t.length <= max) return t;
+  return `${t.slice(0, max - 1)}…`;
+}
+
+/** Упорядоченные «узлы» курса: шаг урока или урок без шагов. */
+function buildCourseSequenceNodes(lessonsListFull) {
+  const nodes = [];
+  lessonsListFull.forEach((entry) => {
+    const { lesson } = entry;
+    const moduleParam = getModuleParamForEntry(entry);
+    const steps = (lesson.steps || []).slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+    if (steps.length > 0) {
+      steps.forEach((s) => {
+        nodes.push({
+          type: 'step',
+          lessonId: lesson.id,
+          stepId: s.id,
+          moduleParam,
+          shortLabel: getStepLabel(s),
+        });
+      });
+    } else {
+      nodes.push({
+        type: 'lesson',
+        lessonId: lesson.id,
+        stepId: null,
+        moduleParam,
+        shortLabel: lesson.title || 'Урок',
+      });
+    }
+  });
+  return nodes;
+}
+
+function nodeToUrl(courseId, node) {
+  if (node.type === 'step') {
+    return buildCourseUrl(courseId, {
+      module: node.moduleParam,
+      lesson: node.lessonId,
+      step: node.stepId,
+    });
+  }
+  return buildCourseUrl(courseId, {
+    module: node.moduleParam,
+    lesson: node.lessonId,
+  });
+}
+
+function findSequenceIndex(nodes, lessonId, stepId) {
+  if (!lessonId) return -1;
+  if (stepId) {
+    const i = nodes.findIndex((n) => n.lessonId === lessonId && n.stepId === stepId);
+    if (i >= 0) return i;
+  }
+  return nodes.findIndex((n) => n.lessonId === lessonId);
+}
+
+/**
+ * Навигация «назад / вперёд» по программе курса в конце карточки урока.
+ * @param activeLessonId — текущий урок из URL (пусто: список нескольких уроков на странице).
+ * @param activeStepId — текущий шаг из URL.
+ */
+function renderLessonNavRow(courseId, lessonsListFull, itemLessonId, activeLessonId, activeStepId) {
+  const nodes = buildCourseSequenceNodes(lessonsListFull);
+  if (!nodes.length) return '';
+  const overviewUrl = buildCourseUrl(courseId);
+
+  let prevNode = null;
+  let nextNode = null;
+
+  if (activeLessonId && itemLessonId === activeLessonId) {
+    const curIdx = findSequenceIndex(nodes, activeLessonId, activeStepId || null);
+    if (curIdx < 0) return '';
+    prevNode = curIdx > 0 ? nodes[curIdx - 1] : null;
+    nextNode = curIdx < nodes.length - 1 ? nodes[curIdx + 1] : null;
+  } else if (!activeLessonId) {
+    const idxs = [];
+    nodes.forEach((n, i) => {
+      if (n.lessonId === itemLessonId) idxs.push(i);
+    });
+    if (!idxs.length) return '';
+    const start = idxs[0];
+    const end = idxs[idxs.length - 1];
+    prevNode = start > 0 ? nodes[start - 1] : null;
+    nextNode = end < nodes.length - 1 ? nodes[end + 1] : null;
+  } else {
+    return '';
+  }
+
+  const prevUrl = prevNode ? nodeToUrl(courseId, prevNode) : overviewUrl;
+  const nextUrl = nextNode ? nodeToUrl(courseId, nextNode) : overviewUrl;
+  const prevText = prevNode ? `← ${truncateNavLabel(prevNode.shortLabel)}` : '← Содержание курса';
+  const nextText = nextNode ? `${truncateNavLabel(nextNode.shortLabel)} →` : 'Содержание курса →';
+
+  return `
+    <nav class="course-lesson-nav" aria-label="Переход к соседним разделам курса">
+      <a href="${escapeHtml(prevUrl)}" class="btn btn-outline course-lesson-nav-btn course-nav-link">${escapeHtml(prevText)}</a>
+      <a href="${escapeHtml(nextUrl)}" class="btn btn-outline course-lesson-nav-btn course-nav-link">${escapeHtml(nextText)}</a>
+    </nav>
+  `;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   const root = document.getElementById('course-root');
   if (!root) return;
@@ -161,8 +344,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       isAuthenticated ? apiGetCourseProgress(courseId).catch(() => null) : Promise.resolve(null),
     ]);
 
-    const progress = progressRes || { enrolled: false, completedLessonIds: [], totalLessons: 0 };
+    let progress = {
+      enrolled: false,
+      completedLessonIds: [],
+      totalLessons: 0,
+      practicalSubmissions: [],
+      ...(progressRes || {}),
+    };
     const completedSet = new Set(progress.completedLessonIds || []);
+    const practicalMap = buildPracticalMap(progress);
     const viewModuleId = getModuleId();
     const viewLessonId = getLessonId();
     const viewStepId = getStepId();
@@ -331,7 +521,19 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
         `
             : '';
-        const stepsHtml = lessonHasSteps ? renderLessonSteps(lesson, i, courseId, progress, completedSet, viewStepId || null) : '';
+        const stepsHtml = lessonHasSteps
+          ? renderLessonSteps(
+              lesson,
+              i,
+              courseId,
+              progress,
+              completedSet,
+              viewStepId || null,
+              practicalMap,
+              isAuthenticated
+            )
+          : '';
+        const navHtml = renderLessonNavRow(courseId, lessonsListFull, lesson.id, viewLessonId, viewStepId);
         return `
         <li class="course-lesson-item" data-lesson-id="${escapeHtml(lesson.id)}">
           <div class="course-lesson-header">
@@ -343,6 +545,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           ${attHtml}
           ${quizBlock}
           ${stepsHtml}
+          ${navHtml}
         </li>
       `;
       })
@@ -398,10 +601,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       <div class="page-header">
         <div>
           <h1 class="page-title">${escapeHtml(course.title)}</h1>
-          <p class="page-header-meta">${escapeHtml(course.description || '')}</p>
         </div>
         <div class="filters">
-          <span class="tag tag-green">${totalLessons} уроков</span>
+          <span class="tag tag-green">${totalLessons} ${pluralRu(totalLessons, ['урок', 'урока', 'уроков'])}</span>
         </div>
       </div>
 
@@ -536,7 +738,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             <button type="button" class="btn btn-primary btn-sm quiz-submit" data-lesson-id="${escapeHtml(lesson.id)}">Отправить ответы</button>
           </div>
         ` : '';
-        const stepsHtmlNew = lessonHasSteps ? renderLessonSteps(lesson, i, courseId, progress, completedSet, stepId || null) : '';
+        const practicalMapNav = buildPracticalMap(progress);
+        const stepsHtmlNew = lessonHasSteps
+          ? renderLessonSteps(
+              lesson,
+              i,
+              courseId,
+              progress,
+              completedSet,
+              stepId || null,
+              practicalMapNav,
+              isAuthenticated
+            )
+          : '';
+        const navHtmlNew = renderLessonNavRow(courseId, lessonsListFull, lesson.id, lessonId, stepId);
         return `
           <li class="course-lesson-item" data-lesson-id="${escapeHtml(lesson.id)}">
             <div class="course-lesson-header">
@@ -548,6 +763,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             ${attHtml}
             ${quizBlock}
             ${stepsHtmlNew}
+            ${navHtmlNew}
           </li>
         `;
       }).join('');
@@ -570,6 +786,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       attachContentListeners();
     }
 
+    function refreshLessonNavs() {
+      const lid = getLessonId();
+      const sid = getStepId();
+      root.querySelectorAll('.course-lesson-item').forEach((item) => {
+        const itemLessonId = item.getAttribute('data-lesson-id');
+        const nav = item.querySelector('.course-lesson-nav');
+        if (!nav) return;
+        const newHtml = renderLessonNavRow(courseId, lessonsListFull, itemLessonId, lid, sid);
+        if (newHtml) {
+          nav.outerHTML = newHtml;
+        } else {
+          nav.remove();
+        }
+      });
+    }
+
     function attachContentListeners() {
       root.querySelectorAll('.lesson-step-next').forEach((btn) => {
         btn.addEventListener('click', () => {
@@ -579,7 +811,19 @@ document.addEventListener('DOMContentLoaded', async () => {
           const blocks = container.querySelectorAll('.lesson-step-block');
           const idx = Array.from(blocks).indexOf(block);
           block.style.display = 'none';
-          if (blocks[idx + 1]) blocks[idx + 1].style.display = 'block';
+          if (blocks[idx + 1]) {
+            blocks[idx + 1].style.display = 'block';
+            const lessonId = container.getAttribute('data-lesson-id');
+            const entry = lessonsListFull.find(({ lesson }) => lesson.id === lessonId);
+            const modParam = entry ? getModuleParamForEntry(entry) : '';
+            const nextStepId = blocks[idx + 1].getAttribute('data-step-id');
+            if (lessonId && nextStepId) {
+              const url = buildCourseUrl(courseId, { module: modParam, lesson: lessonId, step: nextStepId });
+              window.history.replaceState({ moduleId: modParam, lessonId, stepId: nextStepId }, '', url);
+              setActiveNavLink();
+              refreshLessonNavs();
+            }
+          }
         });
       });
       root.querySelectorAll('.lesson-step-check').forEach((btn) => {
@@ -655,6 +899,85 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
           } catch (e) { showToast(e.message || 'Ошибка отправки.', 'error'); btn.disabled = false; }
         });
+      });
+      attachPracticalStepListenersOnce();
+    }
+
+    function attachPracticalStepListenersOnce() {
+      if (root.dataset.practicalStepBound === '1') return;
+      root.dataset.practicalStepBound = '1';
+
+      root.addEventListener('click', async (e) => {
+        const retryBtn = e.target.closest('.lesson-practical-retry');
+        if (retryBtn) {
+          e.preventDefault();
+          const wrap = retryBtn.closest('.lesson-step-practical-wrap');
+          const ta = wrap?.querySelector('.lesson-step-practical-input');
+          if (ta) {
+            ta.readOnly = false;
+            ta.removeAttribute('readonly');
+            ta.classList.remove('lesson-step-practical-input--locked');
+            ta.focus();
+          }
+          retryBtn.textContent = 'Отправить на проверку';
+          retryBtn.classList.remove('lesson-practical-retry', 'btn-outline');
+          retryBtn.classList.add('lesson-practical-submit', 'btn-primary');
+          return;
+        }
+
+        const btn = e.target.closest('.lesson-practical-submit');
+        if (!btn || !root.contains(btn)) return;
+
+        const lessonId = btn.getAttribute('data-lesson-id');
+        const practicalStepId = btn.getAttribute('data-step-id');
+        const wrap = btn.closest('.lesson-step-practical-wrap');
+        const ta = wrap?.querySelector('.lesson-step-practical-input');
+        const text = (ta?.value || '').trim();
+        if (!text) {
+          showToast('Введите ответ.', 'error');
+          return;
+        }
+        btn.disabled = true;
+        try {
+          const result = await apiSubmitCoursePractical(courseId, lessonId, practicalStepId, text);
+          const feedbackEl = wrap?.querySelector('.lesson-step-practical-feedback');
+          if (feedbackEl) {
+            const savedLike = {
+              submissionText: result.submissionText,
+              analysis: result.analysisRaw,
+              score: result.score,
+              updatedAt: new Date().toISOString(),
+            };
+            feedbackEl.innerHTML = renderPracticalFeedbackPanel(savedLike);
+          }
+          if (ta) {
+            ta.readOnly = true;
+            ta.classList.add('lesson-step-practical-input--locked');
+          }
+          btn.textContent = 'Попробовать ещё раз';
+          btn.classList.remove('lesson-practical-submit', 'btn-primary');
+          btn.classList.add('lesson-practical-retry', 'btn-outline');
+
+          progress.practicalSubmissions = progress.practicalSubmissions || [];
+          const idx = progress.practicalSubmissions.findIndex(
+            (p) => p.lessonId === lessonId && p.stepId === practicalStepId
+          );
+          const entry = {
+            lessonId,
+            stepId: practicalStepId,
+            submissionText: result.submissionText,
+            analysis: result.analysisRaw,
+            score: result.score,
+            updatedAt: new Date().toISOString(),
+          };
+          if (idx >= 0) progress.practicalSubmissions[idx] = entry;
+          else progress.practicalSubmissions.push(entry);
+          showToast('Ответ сохранён и проверен.', 'success');
+        } catch (err) {
+          showToast(err.message || 'Не удалось отправить ответ.', 'error');
+        } finally {
+          btn.disabled = false;
+        }
       });
     }
 

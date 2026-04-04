@@ -28,6 +28,11 @@ app.use(express.json());
 
 const frontendPath = path.join(__dirname, '..', 'frontend');
 
+// Вход в админку — сразу сводка (Dashboard), без промежуточной страницы admin/index.html
+app.get(['/admin', '/admin/'], (req, res) => {
+  res.redirect(302, '/admin/dashboard');
+});
+
 // 301: /page.html -> /page, /index.html и */index.html -> без «index» и без .html
 function redirectHtmlToCleanUrl(req, res, next) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
@@ -42,7 +47,7 @@ function redirectHtmlToCleanUrl(req, res, next) {
   return res.redirect(301, clean + qs);
 }
 
-// GET /courses -> courses.html, GET / -> index.html, GET /admin -> admin/index.html
+// GET /courses -> courses.html, GET / -> index.html; /admin редирект на /admin/dashboard (см. выше)
 function serveExtensionlessHtml(req, res, next) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
   if (req.path.startsWith('/api/') || req.path.startsWith('/uploads')) return next();

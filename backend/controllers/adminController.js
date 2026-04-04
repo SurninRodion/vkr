@@ -1025,6 +1025,7 @@ async function deleteCourse(req, res) {
         db.run('DELETE FROM course_quiz_questions WHERE lesson_id = ?', [lid]);
       });
       db.run('DELETE FROM course_modules WHERE course_id = ?', [id]);
+      db.run('DELETE FROM course_practical_submissions WHERE course_id = ?', [id]);
       db.run('DELETE FROM course_lessons WHERE course_id = ?', [id], (err2) => {
         if (err2) return res.status(500).json({ message: 'Ошибка удаления уроков' });
         db.run('DELETE FROM courses WHERE id = ?', [id], function (err3) {

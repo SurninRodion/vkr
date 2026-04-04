@@ -70,30 +70,97 @@
               </div>
             </div>
 
-            <div class="admin-table-wrapper">
-              <div class="admin-page-header" style="margin-bottom: 10px">
+            <div class="admin-table-wrapper admin-tasks-panel">
+              <div class="admin-page-header" style="margin-bottom: 14px">
                 <div>
                   <h2 class="card-title">Список заданий</h2>
-                  <p class="card-description">Все задания, доступные пользователям.</p>
+                  <p class="card-description">Все задания, доступные пользователям в разделе «Практика».</p>
                 </div>
                 <button class="btn btn-primary" id="btn-create-task">Новое задание</button>
               </div>
 
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th>Название</th>
-                    <th>Сложность</th>
-                    <th>Баллы</th>
-                    <th>Тип</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody id="admin-tasks-body"></tbody>
-              </table>
+              <div class="admin-tasks-filters">
+                <div class="admin-tasks-toolbar">
+                  <span class="admin-tasks-toolbar-title">Фильтрация списка</span>
+                  <div class="admin-tasks-filter-row">
+                    <label class="admin-tasks-filter-item">
+                      <span class="admin-tasks-filter-label">Сложность</span>
+                      <select id="filter-difficulty" class="form-input form-input--compact">
+                        <option value="">Все</option>
+                        <option value="easy">Лёгкая</option>
+                        <option value="medium">Средняя</option>
+                        <option value="hard">Сложная</option>
+                      </select>
+                    </label>
+                    <label class="admin-tasks-filter-item">
+                      <span class="admin-tasks-filter-label">Тип</span>
+                      <select id="filter-type" class="form-input form-input--compact">
+                        <option value="">Все типы</option>
+                      </select>
+                    </label>
+                    <label class="admin-tasks-filter-item admin-tasks-filter-item--points">
+                      <span class="admin-tasks-filter-label">Баллы (от — до)</span>
+                      <span class="admin-tasks-points-range">
+                        <input
+                          type="number"
+                          id="filter-points-min"
+                          class="form-input form-input--compact"
+                          min="0"
+                          placeholder="мин"
+                          aria-label="Минимум баллов"
+                        />
+                        <span class="admin-tasks-points-sep">—</span>
+                        <input
+                          type="number"
+                          id="filter-points-max"
+                          class="form-input form-input--compact"
+                          min="0"
+                          placeholder="макс"
+                          aria-label="Максимум баллов"
+                        />
+                      </span>
+                    </label>
+                    <button type="button" class="btn btn-ghost btn-sm" id="filter-reset">Сбросить фильтры</button>
+                  </div>
+                </div>
+                <div class="admin-tasks-legend" role="note">
+                  <div class="admin-tasks-legend-title">Обозначения колонок и фильтры</div>
+                  <ul class="admin-tasks-legend-list">
+                    <li>
+                      <strong>Фильтры</strong> — над таблицей можно выбрать сложность, тип и диапазон баллов (от–до). Кнопка «Сбросить фильтры» показывает полный список.
+                    </li>
+                    <li>
+                      <strong>Сложность:</strong>
+                      <span class="admin-legend-samples">
+                        <span class="admin-badge-diff admin-badge-diff--easy">Лёгкая</span>
+                        <span class="admin-badge-diff admin-badge-diff--medium">Средняя</span>
+                        <span class="admin-badge-diff admin-badge-diff--hard">Сложная</span>
+                      </span>
+                      — уровень задания в практике.
+                    </li>
+                    <li><strong>Тип</strong> — категория задания (улучшение промпта, урок, оптимизация и т.д.).</li>
+                    <li><strong>Баллы</strong> — сколько очков получит пользователь за зачётное выполнение.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="admin-tasks-scroll">
+                <table class="admin-tasks-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Название</th>
+                      <th scope="col">Сложность</th>
+                      <th scope="col">Баллы</th>
+                      <th scope="col">Тип</th>
+                      <th scope="col" class="admin-tasks-col-actions">Действия</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-tasks-body"></tbody>
+                </table>
+              </div>
             </div>
 
-            <div class="card">
+            <div class="card admin-task-form-panel" id="admin-task-form-panel" hidden>
               <h3 class="card-title">Создание / редактирование задания</h3>
               <form id="task-form" class="admin-form-grid">
                 <div class="form-field">
@@ -108,21 +175,20 @@
                 </div>
                 <div class="form-field">
                   <label class="form-label">Тип задания</label>
-                  <input
-                    type="text"
-                    name="type"
-                    id="task-type"
-                    class="form-input"
-                    placeholder="improvement / lesson / optimization"
-                    required
-                  />
+                  <select name="type" id="task-type" class="form-input" required>
+                    <option value="improvement">Улучшение промпта</option>
+                    <option value="lesson">Урок / план</option>
+                    <option value="optimization">Оптимизация</option>
+                    <option value="generic" selected>Общее</option>
+                    <option value="generated">Сгенерированное (legacy)</option>
+                  </select>
                 </div>
                 <div class="form-field">
                   <label class="form-label">Сложность</label>
                   <select name="difficulty" id="task-difficulty" class="form-input">
-                    <option value="easy">easy</option>
-                    <option value="medium" selected>medium</option>
-                    <option value="hard">hard</option>
+                    <option value="easy">Лёгкая</option>
+                    <option value="medium" selected>Средняя</option>
+                    <option value="hard">Сложная</option>
                   </select>
                 </div>
                 <div class="form-field">
@@ -155,51 +221,6 @@
                   <span class="admin-badge-muted" id="task-form-mode">Режим: создание</span>
                 </div>
               </form>
-            </div>
-
-            <div class="card">
-              <h3 class="card-title">Генерация заданий через AI</h3>
-              <p class="card-description">
-                Введите тему, количество и сложность. Задания будут сгенерированы при помощи AI и
-                отправлены в эту же форму для последующего сохранения или импорта.
-              </p>
-              <form id="ai-generate-form" class="admin-form-grid">
-                <div class="form-field">
-                  <label class="form-label">Тема</label>
-                  <input
-                    type="text"
-                    id="ai-topic"
-                    class="form-input"
-                    placeholder="Например: промпт-инжиниринг для учителей"
-                    required
-                  />
-                </div>
-                <div class="form-field">
-                  <label class="form-label">Количество заданий</label>
-                  <input
-                    type="number"
-                    id="ai-count"
-                    class="form-input"
-                    min="1"
-                    max="10"
-                    value="3"
-                  />
-                </div>
-                <div class="form-field">
-                  <label class="form-label">Сложность</label>
-                  <select id="ai-difficulty" class="form-input">
-                    <option value="easy">easy</option>
-                    <option value="medium" selected>medium</option>
-                    <option value="hard">hard</option>
-                  </select>
-                </div>
-                <div class="admin-form-actions" style="grid-column: 1 / -1">
-                  <button type="submit" class="btn btn-outline" id="ai-generate-btn">
-                    Сгенерировать задания через AI
-                  </button>
-                </div>
-              </form>
-              <div id="ai-generated-tasks" style="margin-top: 10px"></div>
             </div>
           </div>
         </div>

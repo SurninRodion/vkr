@@ -67,21 +67,40 @@
               </div>
             </div>
 
-            <div class="admin-table-wrapper">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Имя</th>
-                    <th>Email</th>
-                    <th>Очки</th>
-                    <th>Уровень</th>
-                    <th>Роль</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody id="admin-users-body"></tbody>
-              </table>
+            <div class="admin-table-wrapper admin-tasks-panel admin-users-panel">
+              <div class="admin-page-header admin-users-page-header">
+                <div>
+                  <h2 class="card-title">Список пользователей</h2>
+                  <p class="card-description">Зарегистрированные пользователи и их активность на сайте.</p>
+                </div>
+              </div>
+
+              <div class="admin-tasks-legend admin-tasks-legend--compact" role="note">
+                <div class="admin-tasks-legend-title">Обозначения колонок</div>
+                <ul class="admin-tasks-legend-list">
+                  <li><strong>№</strong> — порядковый номер в таблице (не внутренний идентификатор).</li>
+                  <li><strong>Последний визит</strong> — когда пользователь последний раз обращался к API с авторизацией (вход, действия на сайте).</li>
+                  <li><strong>Роль</strong> — права доступа; изменения сохраняются сразу после выбора.</li>
+                </ul>
+              </div>
+
+              <div class="admin-tasks-scroll admin-users-scroll">
+                <table class="admin-tasks-table admin-users-table">
+                  <thead>
+                    <tr>
+                      <th scope="col" class="admin-users-col-num">№</th>
+                      <th scope="col">Имя</th>
+                      <th scope="col" class="admin-users-col-email">Email</th>
+                      <th scope="col" class="admin-users-col-stat">Очки</th>
+                      <th scope="col" class="admin-users-col-stat">Ур.</th>
+                      <th scope="col" class="admin-users-col-role">Роль</th>
+                      <th scope="col" class="admin-users-col-visit">Визит</th>
+                      <th scope="col" class="admin-tasks-col-actions admin-users-col-actions">Действ.</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-users-body"></tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>

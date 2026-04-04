@@ -195,7 +195,7 @@ export function initNavbar() {
         if (action === 'profile') {
           window.location.href = '/profile';
         } else if (action === 'admin') {
-          window.location.href = '/admin';
+          window.location.href = '/admin/dashboard';
         } else if (action === 'logout') {
           logout();
         }
@@ -224,7 +224,7 @@ export function initNavbar() {
         if (action === 'profile') {
           window.location.href = '/profile';
         } else if (action === 'admin') {
-          window.location.href = '/admin';
+          window.location.href = '/admin/dashboard';
         } else if (action === 'logout') {
           dropdown.classList.remove('user-menu-dropdown--open');
           logout();
@@ -300,24 +300,6 @@ export function initGuestProtectedButtons() {
         window.location.href = '/practice';
       }
     });
-  }
-}
-
-export function enforceLabAccess(generateBtn, promptHintEl) {
-  const { isAuthenticated } = getAuthState();
-  if (!generateBtn || !promptHintEl) return;
-
-  if (!isAuthenticated) {
-    generateBtn.classList.add('disabled');
-    promptHintEl.textContent = 'Гость: просмотр интерфейса лаборатории без отправки промптов.';
-
-    generateBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const modal = document.getElementById('auth-modal');
-      if (modal) modal.classList.add('backdrop--visible');
-    });
-  } else {
-    promptHintEl.textContent = 'Формулируйте промпт и отправляйте его в лабораторию.';
   }
 }
 

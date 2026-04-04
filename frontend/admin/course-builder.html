@@ -49,11 +49,8 @@
             <a href="/admin/prompts" class="admin-sidebar-link">
               <span>Библиотека промптов</span>
             </a>
-            <a href="/admin/courses" class="admin-sidebar-link">
+            <a href="/admin/courses" class="admin-sidebar-link admin-sidebar-link--active">
               <span>Курсы</span>
-            </a>
-            <a href="/admin/course-builder" class="admin-sidebar-link admin-sidebar-link--active">
-              <span>Конструктор курса</span>
             </a>
             <a href="/admin/users" class="admin-sidebar-link">
               <span>Пользователи</span>
@@ -121,6 +118,65 @@
         </div>
         <div class="modal-actions">
           <button type="button" class="btn btn-ghost" data-modal-close>Отмена</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модальное окно: название и описание курса -->
+    <div class="backdrop" id="modal-edit-course" aria-hidden="true">
+      <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="modal-edit-course-heading">
+        <h3 class="modal-title" id="modal-edit-course-heading">Редактировать курс</h3>
+        <div class="modal-body">
+          <div class="form-field">
+            <label class="form-label" for="builder-edit-course-title-input">Название курса</label>
+            <input type="text" id="builder-edit-course-title-input" class="form-input" autocomplete="off" />
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="builder-edit-course-desc-input">Описание курса</label>
+            <textarea id="builder-edit-course-desc-input" class="textarea" rows="5"></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" data-modal-edit-course-close>Отмена</button>
+          <button type="button" class="btn btn-primary" id="modal-edit-course-apply">Сохранить</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модальное окно: название модуля -->
+    <div class="backdrop" id="modal-edit-module" aria-hidden="true">
+      <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="modal-edit-module-heading">
+        <h3 class="modal-title" id="modal-edit-module-heading">Название модуля</h3>
+        <div class="modal-body">
+          <div class="form-field">
+            <label class="form-label" for="builder-module-title-input">Название</label>
+            <input type="text" id="builder-module-title-input" class="form-input" autocomplete="off" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" data-modal-module-close>Отмена</button>
+          <button type="button" class="btn btn-primary" id="modal-edit-module-apply">Сохранить</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модальное окно: урок (новый или редактирование) -->
+    <div class="backdrop" id="modal-edit-lesson" aria-hidden="true">
+      <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="modal-edit-lesson-heading">
+        <h3 class="modal-title" id="modal-edit-lesson-heading">Урок</h3>
+        <div class="modal-body">
+          <div class="form-field">
+            <label class="form-label" for="builder-lesson-title-input">Название урока</label>
+            <input type="text" id="builder-lesson-title-input" class="form-input" autocomplete="off" />
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="builder-lesson-content-input">Краткое описание / контент (опционально)</label>
+            <textarea id="builder-lesson-content-input" class="textarea" rows="4"></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" data-modal-lesson-close>Отмена</button>
+          <button type="button" class="btn btn-primary" id="modal-edit-lesson-apply">Сохранить</button>
         </div>
       </div>
     </div>

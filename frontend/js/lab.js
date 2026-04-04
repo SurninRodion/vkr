@@ -5,7 +5,7 @@ import {
   apiGetTaskResult,
   normalizeAnalysisToFive
 } from './api.js';
-import { enforceLabAccess, showToast } from './ui.js';
+import { initAuthGate, showToast } from './ui.js';
 import { getAuthState } from './auth.js';
 
 function scoreToLabel(score) {
@@ -17,6 +17,8 @@ function scoreToLabel(score) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  if (!initAuthGate()) return;
+
   const promptInput = document.getElementById('prompt-input');
   const generateBtn = document.getElementById('generate-btn');
   const outputEl = document.getElementById('ai-output');
@@ -98,17 +100,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             showToast('Не удалось загрузить результат.', 'error');
           }
         }
-      } else {
-        showToast(`Вы решаете задание «${currentTask?.title || 'задание'}». Войдите, чтобы отправить решение.`, 'info');
       }
     } catch (err) {
       console.error(err);
       showToast('Не удалось загрузить задание. Попробуйте ещё раз или выберите его заново.', 'error');
     }
-  }
-
-  if (!isCompletedView) {
-    enforceLabAccess(generateBtn, promptHintEl);
   }
 
   generateBtn.addEventListener('click', async () => {
