@@ -25,7 +25,8 @@ async function authMiddleware(req, res, next) {
       name: user.name,
       role: user.role || 'user',
       points: user.points,
-      level: user.level
+      level: user.level,
+      emailVerified: Boolean(user.email_verified_at)
     };
 
     void updateUserLastSeen(user.id).catch(() => {});

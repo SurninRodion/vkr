@@ -72,7 +72,9 @@
 
           <div class="form-footer">
             <div class="form-helper">
-              
+              <button class="btn btn-ghost btn-sm" type="button" id="forgot-password-btn">
+                Забыли пароль?
+              </button>
             </div>
             <button
               class="btn btn-primary"
@@ -116,6 +118,57 @@
       class="toast-container"
       id="toast-container"
     ></div>
+
+    <div class="backdrop" id="forgot-password-modal" aria-hidden="true">
+      <div class="modal">
+        <h3 class="modal-title">Восстановление пароля</h3>
+        <p class="modal-body">
+          Введите email. Если он зарегистрирован, мы отправим письмо со ссылкой для сброса пароля.
+        </p>
+        <form id="forgot-password-form" class="auth-form" style="margin-top: 12px;">
+          <div class="form-field">
+            <label for="forgot-email" class="form-label">Email</label>
+            <input
+              id="forgot-email"
+              name="email"
+              type="email"
+              class="form-input"
+              autocomplete="email"
+              required
+            />
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-ghost" type="button" data-forgot-close>Закрыть</button>
+            <button class="btn btn-primary" type="submit" id="forgot-submit">Отправить письмо</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="backdrop" id="reset-password-modal" aria-hidden="true">
+      <div class="modal">
+        <h3 class="modal-title">Новый пароль</h3>
+        <p class="modal-body">Придумайте новый пароль для вашего аккаунта.</p>
+        <form id="reset-password-form" class="auth-form" style="margin-top: 12px;">
+          <div class="form-field">
+            <label for="reset-password" class="form-label">Новый пароль</label>
+            <input
+              id="reset-password"
+              name="password"
+              type="password"
+              class="form-input"
+              autocomplete="new-password"
+              minlength="6"
+              required
+            />
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-ghost" type="button" data-reset-close>Закрыть</button>
+            <button class="btn btn-primary" type="submit" id="reset-submit">Сохранить пароль</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <script type="module" src="./js/app.js"></script>
     <script type="module" src="./js/auth.js"></script>

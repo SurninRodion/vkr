@@ -1,4 +1,5 @@
 import { getAuthState, logout } from './auth.js';
+import { apiResendVerification, rateLimitEmailMessage } from './api.js';
 import { showToast } from './toast.js';
 
 export { showToast };
@@ -258,6 +259,96 @@ export function initAuthGate() {
     wrap.classList.add('auth-gate-wrap--locked');
   }
   return isAuthenticated;
+}
+
+function ensureEmailVerifyModal() {
+  let modal = document.getElementById('email-verify-modal');
+  if (modal) return modal;
+
+  modal = document.createElement('div');
+  modal.className = 'backdrop';
+  modal.id = 'email-verify-modal';
+  modal.setAttribute('aria-hidden', 'true');
+  modal.innerHTML = `
+    <div class="modal">
+      <h3 class="modal-title" id="email-verify-title">Подтверждение email</h3>
+      <p class="modal-body" id="email-verify-body">
+        Подтвердите email, чтобы получить доступ к этому разделу. Письмо могло попасть в «Спам».
+      </p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" data-email-verify-close>Закрыть</button>
+        <button class="btn btn-primary" type="button" data-email-verify-resend>Отправить письмо ещё раз</button>
+      </div>
+    </div>
+  `;
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.remove('backdrop--visible');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+  });
+
+  document.body.appendChild(modal);
+  return modal;
+}
+
+export function openEmailVerifyModal({ title, body } = {}) {
+  const modal = ensureEmailVerifyModal();
+  const titleEl = modal.querySelector('#email-verify-title');
+  const bodyEl = modal.querySelector('#email-verify-body');
+  const resendBtn = modal.querySelector('[data-email-verify-resend]');
+  const closeBtn = modal.querySelector('[data-email-verify-close]');
+
+  if (titleEl && title) titleEl.textContent = title;
+  if (bodyEl && body) bodyEl.textContent = body;
+
+  if (closeBtn && !closeBtn.dataset.bound) {
+    closeBtn.dataset.bound = '1';
+    closeBtn.addEventListener('click', () => {
+      modal.classList.remove('backdrop--visible');
+      modal.setAttribute('aria-hidden', 'true');
+    });
+  }
+
+  if (resendBtn && !resendBtn.dataset.bound) {
+    resendBtn.dataset.bound = '1';
+    resendBtn.addEventListener('click', async () => {
+      resendBtn.classList.add('disabled');
+      try {
+        await apiResendVerification();
+        showToast('Письмо отправлено. Проверьте почту (и «Спам»).', 'success');
+      } catch (err) {
+        console.error(err);
+        const rl = rateLimitEmailMessage(err);
+        showToast(rl || 'Не удалось отправить письмо. Попробуйте позже.', 'error');
+      } finally {
+        resendBtn.classList.remove('disabled');
+      }
+    });
+  }
+
+  modal.classList.add('backdrop--visible');
+  modal.setAttribute('aria-hidden', 'false');
+  return modal;
+}
+
+/**
+ * Ограничение для залогиненных пользователей без подтверждённого email.
+ * Используйте на страницах, которые должны быть доступны только после верификации.
+ */
+export function requireVerifiedEmailOrRedirect({
+  toastMessage = 'Подтвердите email, чтобы открыть этот раздел.',
+} = {}) {
+  const { isAuthenticated, user } = getAuthState();
+  if (!isAuthenticated) return true; // гость обрабатывается initAuthGate()
+  if (user?.emailVerified) return true;
+
+  openEmailVerifyModal({
+    title: 'Подтвердите email',
+    body: toastMessage + ' Мы можем отправить письмо ещё раз.',
+  });
+  return false;
 }
 
 export function initGuestProtectedButtons() {

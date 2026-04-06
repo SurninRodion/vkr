@@ -11,7 +11,7 @@
 **Назначение:** Платформа для обучения промпт-инжинирингу: курсы, практические задания, анализ промптов (в т.ч. через внешний ИИ или эвристики), рейтинг, профиль пользователя, админ-панель.
 
 **Стек:**
-- **Backend:** Node.js, Express, SQLite3, JWT, bcrypt, uuid.
+- **Backend:** Node.js, Express, SQLite3, JWT, bcrypt, uuid, nodemailer (SMTP-письма).
 - **Frontend:** статический HTML + CSS + vanilla JavaScript (ES modules), без фреймворков.
 - **База данных:** один файл SQLite (`database.db` по умолчанию).
 
@@ -19,23 +19,78 @@
 
 ## 2. Структура проекта
 
+### 2.0. Что означают каталоги (словарик)
+
+Ниже — краткое объяснение, **зачем нужны папки** и как между собой связаны части бекенда/фронтенда.
+
+#### Backend
+
+- **`backend/routes/`**: “карта API”.
+  - Здесь объявляются HTTP-маршруты (`GET/POST/PUT/...`) и привязываются к обработчикам из `controllers`.
+  - Также здесь подключаются промежуточные проверки (`middleware`), например авторизация.
+
+- **`backend/controllers/`**: бизнес-логика endpoint’ов.
+  - Каждый контроллер — набор функций-обработчиков для конкретной области: `auth`, `tasks`, `profile`, `courses`, `admin` и т.д.
+  - Контроллеры валидируют входные данные, вызывают `models` (работа с БД), `utils` (вспомогательные функции) и формируют JSON-ответ.
+
+- **`backend/models/`**: слой работы с БД (SQLite).
+  - Здесь лежат функции, которые выполняют SQL-запросы (`SELECT/INSERT/UPDATE/DELETE`) и возвращают данные контроллерам.
+  - Важно: модели не должны “знать” про HTTP — только про данные и SQL.
+
+- **`backend/middleware/`**: промежуточные обработчики Express.
+  - Это функции вида `(req, res, next)`, которые выполняются **до** контроллера.
+  - Примеры: проверка JWT (`authMiddleware`), проверка роли админа (`adminMiddleware`), запрет действий до подтверждения email (`requireVerifiedEmail`).
+
+- **`backend/utils/`**: утилиты и интеграции.
+  - Вспомогательные модули, которые не относятся напрямую к роутингу/БД: отправка писем (`mailer.js`), работа с AI (`aiAnalyzer.js`) и т.п.
+
+- **`backend/db/`**: инфраструктура SQLite.
+  - `db.js` — подключение к файлу базы.
+  - `initDB.js` — создание схемы таблиц и “мягкие миграции”.
+  - вспомогательные скрипты для разработки (например очистка/сиды).
+
+- **`backend/scripts/`**: одноразовые/админские скрипты, которые запускаются вручную (CLI).
+  - Например создание администратора.
+
+#### Frontend
+
+- **`frontend/*.html`**: страницы приложения (статический фронт без сборщика).
+  - Переходы между страницами — обычные переходы по URL.
+
+- **`frontend/js/`**: JS-логика страниц (ES modules).
+  - `api.js` — единый клиент для вызова бекенда (`/api/...`).
+  - Остальные файлы обычно соответствуют страницам (`profile.js` → `profile.html`).
+
+- **`frontend/js/admin/`** и **`frontend/admin/`**: админка.
+  - `frontend/admin/*.html` — страницы админки.
+  - `frontend/js/admin/*.js` — логика этих страниц (CRUD, конструктор курсов и т.п.).
+
+- **`frontend/styles.css`**: глобальные стили и компоненты UI (кнопки, модалки, навбар, карточки).
+
 ```
-vkr_test/
+vkr/
 ├── backend/
-│   ├── config.js              # PORT, JWT_SECRET, DB_PATH, AI_API_*, CORS_ORIGIN
-│   ├── server.js              # Точка входа Express, статика frontend, API-роуты
+│   ├── .env                   # (локально/на сервере) переменные окружения: JWT, SMTP, домен и т.п. (НЕ коммитить)
+│   ├── config.js              # Чтение process.env (dotenv), экспорт конфигурации приложения
+│   ├── package.json           # Зависимости backend (Express, sqlite3, nodemailer, jwt, bcrypt и т.д.)
+│   ├── package-lock.json      # Lockfile npm
+│   ├── server.js              # Точка входа Express: CORS, статика frontend, API-роуты, initDB()
 │   ├── db/
 │   │   ├── db.js              # Подключение к SQLite
-│   │   └── initDB.js          # Создание таблиц и сиды заданий
+│   │   ├── initDB.js          # Создание таблиц + «мягкие миграции» (ALTER TABLE ADD COLUMN)
+│   │   └── clearTasks.js      # (утилита) очистка таблицы заданий (для разработки)
 │   ├── models/
-│   │   ├── userModel.js       # users, лидерборд, роли
-│   │   ├── taskModel.js       # tasks
-│   │   ├── resultModel.js     # task_results
-│   │   └── promptModel.js     # prompts (история анализа)
+│   │   ├── userModel.js                # CRUD users: создание, профиль, очки/уровень, роли, last_seen, смена пароля
+│   │   ├── taskModel.js                # CRUD tasks (задания)
+│   │   ├── resultModel.js              # task_results: сохранение/получение результатов, статистика
+│   │   ├── promptModel.js              # prompts: история анализов/генерации в «Лаборатории»
+│   │   ├── emailVerificationModel.js   # одноразовые токены подтверждения email (хэш в БД, raw токен в ссылке)
+│   │   ├── passwordResetModel.js       # одноразовые токены сброса пароля (TTL, one-time)
+│   │   └── rateLimitModel.js           # персистентный rate-limit через SQLite (таблица auth_rate_limits)
 │   ├── controllers/
-│   │   ├── authController.js  # register, login
-│   │   ├── taskController.js  # listTasks, getTask, submitSolution
-│   │   ├── promptController.js# analyze
+│   │   ├── authController.js         # register/login + email verify/resend + forgot/reset password + отправка писем
+│   │   ├── taskController.js         # список/получение задания, submitSolution, результаты, completed ids
+│   │   ├── promptController.js       # analyze: анализ и генерация через GigaChat/AI
 │   │   ├── profileController.js
 │   │   ├── leaderboardController.js
 │   │   └── adminController.js # CRUD tasks, prompts, courses, users; stats; import; generate-ai
@@ -45,31 +100,51 @@ vkr_test/
 │   │   ├── promptRoutes.js
 │   │   ├── profileRoutes.js
 │   │   ├── leaderboardRoutes.js
+│   │   ├── courseRoutes.js
+│   │   ├── libraryRoutes.js
 │   │   └── adminRoutes.js
 │   ├── middleware/
 │   │   ├── authMiddleware.js  # JWT → req.user
-│   │   └── adminMiddleware.js # req.user.role === 'admin'
+│   │   ├── adminMiddleware.js # req.user.role === 'admin'
+│   │   ├── requireVerifiedEmail.js # блокирует действия до подтверждения email (403 + code EMAIL_NOT_VERIFIED)
+│   │   └── uploadMiddleware.js     # multer-конфигурация для загрузок (вложения к урокам)
 │   ├── utils/
-│   │   └── aiAnalyzer.js      # Анализ промпта: внешний API или эвристики
+│   │   ├── aiAnalyzer.js      # Анализ/генерация промпта: GigaChat или эвристики/внешний API
+│   │   └── mailer.js          # nodemailer transport + sendMail() (SMTP) + проверка конфигурации
 │   └── scripts/
 │       └── createAdminUser.js # Создание/обновление админа по email/password
 ├── frontend/
 │   ├── index.html             # Главная
-│   ├── login.html, register.html
-│   ├── courses.html, course.html
-│   ├── practice.html         # Список заданий и отправка решений
+│   ├── login.html             # Вход + модалки «Забыли пароль» и «Новый пароль по ссылке»
+│   ├── register.html          # Регистрация
+│   ├── courses.html           # Список курсов
+│   ├── course.html            # Страница курса (уроки/прогресс)
+│   ├── practice.html          # Список заданий и отправка решений
 │   ├── library.html           # Библиотека промптов
 │   ├── leaderboard.html
 │   ├── profile.html
 │   ├── lab.html               # Песочница анализа промпта
 │   ├── styles.css             # Общие стили
 │   ├── js/
-│   │   ├── api.js             # Базовый request(), все api* функции
-│   │   ├── ui.js              # Навигация, модалки, авторизация в UI
-│   │   ├── tasks.js, profile.js, leaderboard.js, lab.js
+│   │   ├── api.js             # Базовый request(); ApiError; api* методы; форматирование retry-after для лимитов
+│   │   ├── app.js             # Инициализация UI на страницах (navbar, общие обработчики)
+│   │   ├── ui.js              # Навигация/модалки/guest gate, toasts, navbar
+│   │   ├── toast.js           # Тост-уведомления
+│   │   ├── auth.js            # login/register + модалки forgot/reset password (на login.html)
+│   │   ├── auth-head.js       # небольшой скрипт в <head> (гидратация UI авторизации)
+│   │   ├── home.js            # логика главной страницы
+│   │   ├── tasks.js           # страница практики
+│   │   ├── profile.js         # личный кабинет + модалка подтверждения email + resend + обработка verifyToken
+│   │   ├── leaderboard.js     # рейтинг
+│   │   ├── courses.js         # список курсов
+│   │   ├── course.js          # курс/уроки/тесты/практика
+│   │   ├── lab.js             # лаборатория анализа промптов
+│   │   ├── library.js         # библиотека промптов
+│   │   ├── pluralize.js       # склонения (рус.)
 │   │   └── admin/
 │   │       ├── admin.js
 │   │       ├── adminTasks.js, adminPrompts.js, adminUsers.js
+│   │       ├── courseBuilder.js      # конструктор курса (админ)
 │   │       └── (страницы админки в admin/*.html)
 │   └── admin/
 │       ├── index.html         # Редирект/дашборд админки
@@ -77,6 +152,50 @@ vkr_test/
 │       └── ...
 └── DOCUMENTATION.md           # Этот файл
 ```
+
+### 2.1. Backend: назначение ключевых файлов
+
+- **`backend/server.js`**: единая точка входа.
+  - включает CORS, JSON-parsing;
+  - раздаёт статику фронта (`frontend/`) и `backend/uploads/` по `/uploads`;
+  - подключает API-роуты `/api/*`;
+  - запускает `initDB()`;
+  - содержит редирект совместимости для старых ссылок подтверждения: `/verify-email?token=...` → `/profile?verifyToken=...`.
+
+- **`backend/config.js`**: читает переменные окружения из `backend/.env` и экспортирует конфиг.
+
+- **`backend/db/initDB.js`**: создаёт все таблицы (и добавляет новые колонки через `ALTER TABLE ... ADD COLUMN`, чтобы поддерживать уже существующую базу).
+
+- **`backend/utils/mailer.js`**: SMTP-отправка писем через `nodemailer`. Проверяет, что SMTP настроен, иначе кидает ошибку `MAIL_NOT_CONFIGURED`.
+
+- **`backend/controllers/authController.js`**: вся логика авторизации и “почтовых” сценариев:
+  - `register`, `login`;
+  - `verifyEmail`, `resendVerification`;
+  - `forgotPassword`, `resetPassword`;
+  - формирует ссылки из `APP_BASE_URL` и отправляет письма через `mailer`.
+
+- **`backend/middleware/requireVerifiedEmail.js`**: блокирует действия до подтверждения email. Используется на маршрутах:
+  - `/api/prompts/analyze`
+  - `/api/tasks/submit`
+  - защищённые действия курсов (`enroll`, `complete`, `quiz`, `steps`).
+
+### 2.2. Frontend: назначение ключевых файлов
+
+- **`frontend/login.html`**: форма входа + модалки:
+  - “Забыли пароль?” (ввод email → письмо);
+  - “Новый пароль” (открывается автоматически при `?resetToken=...`).
+
+- **`frontend/profile.html` + `frontend/js/profile.js`**:
+  - личный кабинет;
+  - UI статуса email (подтверждён/нет) + кнопка resend;
+  - модалка подтверждения email:
+    - открывается после регистрации (`/profile?needsEmailVerify=1`);
+    - подтверждает по ссылке из письма (`/profile?verifyToken=...`).
+
+- **`frontend/js/api.js`**:
+  - единый `request()` для API;
+  - выбрасывает `ApiError` с `status` и `retryAfterSeconds` (для лимитов отправки писем);
+  - содержит методы `apiResendVerification`, `apiVerifyEmail`, `apiForgotPassword`, `apiResetPassword`.
 
 ---
 
@@ -92,6 +211,13 @@ vkr_test/
 | AI_API_URL  | URL внешнего API для анализа промптов | '' (пусто = только эвристики) |
 | AI_API_KEY  | Ключ для внешнего AI API          | ''                               |
 | CORS_ORIGIN | Разрешённый origin для CORS       | http://localhost:5500            |
+| APP_BASE_URL | Публичный base URL (для ссылок в письмах) | http://localhost:${PORT} |
+| SMTP_HOST   | SMTP хост (например `smtp.yandex.ru`) | '' |
+| SMTP_PORT   | SMTP порт (обычно 465) | 465 |
+| SMTP_SECURE | `true` для TLS (465), `false` для STARTTLS (587) | true |
+| SMTP_USER   | Логин SMTP (обычно email) | '' |
+| SMTP_PASS   | Пароль SMTP (лучше “пароль приложения”) | '' |
+| MAIL_FROM   | Адрес отправителя писем (`"Name <email@...>"`) | SMTP_USER |
 
 **Запуск:**
 - Из корня проекта: в папке `backend` выполнить `npm install`, затем `npm start` (или `npm run dev` с nodemon).
@@ -108,45 +234,185 @@ vkr_test/
 
 ## 4. База данных (SQLite)
 
-Основные таблицы (из `initDB.js` и кода):
+База — один файл SQLite (`backend/database.db` или путь из `DB_PATH`). Схема создаётся/обновляется в `backend/db/initDB.js`.
 
-- **users**  
-  `id` (TEXT PK), `email` (UNIQUE), `password_hash`, `name`, `role` (DEFAULT 'user'), `points`, `level`, `created_at`.
+Ниже — **все таблицы** и назначение ключевых колонок.
 
-- **tasks**  
-  `id` (TEXT PK), `title`, `description`, `difficulty`, `points`, `type`.  
-  Типы заданий: например `improvement`, `lesson`, `optimization`. Сложность: `easy`, `medium`, `hard`.
+### 4.1. Таблица `users`
 
-- **task_results**  
-  `id`, `user_id`, `task_id`, `prompt_text`, `ai_feedback` (JSON текст), `score`, `created_at`.
+Хранит аккаунты пользователей.
 
-- **prompts**  
-  `id`, `user_id`, `prompt_text`, `ai_response`, `analysis` (JSON текст), `created_at`.  
-  История анализа промптов (лаборатория и т.п.).
+- `id` (TEXT, PK): UUID пользователя.
+- `email` (TEXT, UNIQUE, NOT NULL): логин пользователя.
+- `password_hash` (TEXT, NOT NULL): bcrypt-хэш пароля.
+- `name` (TEXT, NOT NULL): отображаемое имя (видно в рейтинге/профиле).
+- `role` (TEXT, DEFAULT `'user'`): роль (`user` / `admin`).
+- `points` (INTEGER, DEFAULT 0): очки за задания/активности.
+- `level` (INTEGER, DEFAULT 1): уровень пользователя.
+  - Пересчёт при начислении очков: \(level = 1 + \lfloor points / 500 \rfloor\).
+- `created_at` (TEXT, DEFAULT `datetime('now')`): дата регистрации.
+- `last_seen_at` (TEXT, nullable): “последняя активность” (обновляется в `authMiddleware`).
+- `email_verified_at` (TEXT, nullable): дата подтверждения email. `NULL` = email не подтверждён.
 
-- **prompt_library**  
-  `id`, `title`, `category`, `description`, `example`, `analysis`, `created_at`.  
-  Админская библиотека промптов.
+### 4.2. Таблица `email_verification_tokens`
 
-- **courses**  
-  `id`, `title`, `description`.
+Одноразовые токены подтверждения email. В БД хранится **хэш**, raw-токен — только в ссылке.
 
-- **course_lessons**  
-  `id`, `course_id`, `title`, `content`, `order_index`.
+- `id` (TEXT, PK): UUID токена.
+- `user_id` (TEXT, NOT NULL): ссылка на `users.id`.
+- `token_hash` (TEXT, NOT NULL): SHA-256(token) в hex.
+- `expires_at` (TEXT, NOT NULL): срок действия (datetime).
+- `used_at` (TEXT, nullable): когда токен был использован (one-time).
+- `created_at` (TEXT): когда токен создан.
 
-- **course_enrollments**  
-  `id`, `user_id`, `course_id`, `enrolled_at`. Уникальная пара (user_id, course_id).
+### 4.3. Таблица `password_reset_tokens`
 
-- **course_lesson_progress**  
-  `user_id`, `lesson_id`, `completed_at`. Прогресс пользователя по урокам (отметка «пройден»).
+Одноразовые токены сброса пароля (TTL, one-time). Принцип тот же: в БД хранится **хэш**.
 
-- **course_lesson_attachments**  
-  `id`, `lesson_id`, `file_path`, `original_name`, `mime_type`, `order_index`. Файлы и изображения к уроку (каталог `backend/uploads/courses/<lessonId>/`).
+- `id` (TEXT, PK): UUID токена.
+- `user_id` (TEXT, NOT NULL): ссылка на `users.id`.
+- `token_hash` (TEXT, NOT NULL): SHA-256(token) в hex.
+- `expires_at` (TEXT, NOT NULL): срок действия (datetime).
+- `used_at` (TEXT, nullable): токен использован.
+- `created_at` (TEXT): создан.
 
-- **course_quiz_questions**  
-  `id`, `lesson_id`, `question_text`, `options` (JSON), `correct_index`, `order_index`. Вопросы закрепляющего теста; урок считается пройденным только после прохождения теста (порог 80%).
+### 4.4. Таблица `auth_rate_limits`
 
-Уровень пользователя пересчитывается при начислении очков: `level = 1 + (points / 500)`.
+Персистентный rate-limit для “почтовых” эндпоинтов (чтобы не спамили письмами и не грузили SMTP).
+
+- `id` (TEXT, PK): UUID записи лимита.
+- `scope` (TEXT, NOT NULL): тип лимита, например:
+  - `forgot_password:ip`
+  - `forgot_password:email`
+  - `resend_verification:ip`
+  - `resend_verification:email`
+- `key` (TEXT, NOT NULL): ключ лимита (IP или email).
+- `window_start_ms` (INTEGER, NOT NULL): старт окна (epoch ms).
+- `count` (INTEGER, NOT NULL): сколько запросов было в текущем окне.
+- `created_at` (TEXT): создана.
+- `updated_at` (TEXT): обновлена.
+- UNIQUE(`scope`, `key`): одна строка на один ключ в рамках scope.
+
+### 4.5. Таблица `tasks`
+
+Справочник заданий практики.
+
+- `id` (TEXT, PK): UUID задания.
+- `title` (TEXT): заголовок.
+- `description` (TEXT): описание задания.
+- `difficulty` (TEXT): сложность (`easy`/`medium`/`hard`).
+- `points` (INTEGER): сколько очков начислить за выполнение.
+- `type` (TEXT): тип задания (например `improvement`, `lesson`, `optimization`).
+
+### 4.6. Таблица `task_results`
+
+Результаты выполнения заданий.
+
+- `id` (TEXT, PK): UUID результата.
+- `user_id` (TEXT, NOT NULL): пользователь.
+- `task_id` (TEXT, NOT NULL): задание.
+- `prompt_text` (TEXT, NOT NULL): текст ответа/промпта пользователя.
+- `ai_feedback` (TEXT, nullable): JSON-строка с анализом/ответом ИИ.
+- `score` (INTEGER, nullable): оценка (обычно на основе `analysis.effectiveness`).
+- `created_at` (TEXT): время отправки.
+
+### 4.7. Таблица `prompts`
+
+История “Лаборатории” (анализ промпта/генерация).
+
+- `id` (TEXT, PK): UUID записи.
+- `user_id` (TEXT, NOT NULL): пользователь.
+- `prompt_text` (TEXT, NOT NULL): исходный промпт.
+- `ai_response` (TEXT, nullable): текст ответа/генерации.
+- `analysis` (TEXT, nullable): JSON-строка анализа.
+- `created_at` (TEXT): время записи.
+
+### 4.8. Таблица `prompt_library`
+
+Админская библиотека промптов (шаблоны и примеры).
+
+- `id` (TEXT, PK)
+- `title` (TEXT)
+- `category` (TEXT, nullable)
+- `description` (TEXT, nullable)
+- `example` (TEXT, nullable)
+- `analysis` (TEXT, nullable): пояснение/разбор
+- `created_at` (TEXT)
+
+### 4.9. Таблицы курсов
+
+#### `courses`
+- `id` (TEXT, PK)
+- `title` (TEXT)
+- `description` (TEXT, nullable)
+
+#### `course_lessons`
+- `id` (TEXT, PK)
+- `course_id` (TEXT, NOT NULL): ссылка на `courses.id`
+- `title` (TEXT)
+- `content` (TEXT, nullable): контент урока (теория)
+- `order_index` (INTEGER): порядок
+- `module_id` (TEXT, nullable): привязка к модулю (`course_modules.id`) — добавляется миграцией
+
+#### `course_enrollments`
+Записи пользователя на курс.
+- `id` (TEXT, PK)
+- `user_id` (TEXT, NOT NULL)
+- `course_id` (TEXT, NOT NULL)
+- `enrolled_at` (TEXT)
+- UNIQUE(`user_id`, `course_id`)
+
+#### `course_lesson_progress`
+Отметка “урок пройден”.
+- `user_id` (TEXT, PK часть)
+- `lesson_id` (TEXT, PK часть)
+- `completed_at` (TEXT)
+
+#### `course_lesson_attachments`
+Файлы/картинки к урокам (хранятся в `backend/uploads/...`, в таблице — метаданные).
+- `id` (TEXT, PK)
+- `lesson_id` (TEXT, NOT NULL)
+- `file_path` (TEXT, NOT NULL): относительный путь в `backend/uploads`
+- `original_name` (TEXT): оригинальное имя
+- `mime_type` (TEXT, nullable)
+- `order_index` (INTEGER)
+
+#### `course_quiz_questions`
+Вопросы теста урока.
+- `id` (TEXT, PK)
+- `lesson_id` (TEXT, NOT NULL)
+- `question_text` (TEXT)
+- `options` (TEXT): JSON-массив вариантов
+- `correct_index` (INTEGER)
+- `order_index` (INTEGER)
+
+#### `course_modules`
+Модули курса (для группировки уроков).
+- `id` (TEXT, PK)
+- `course_id` (TEXT, NOT NULL)
+- `title` (TEXT)
+- `order_index` (INTEGER)
+
+#### `course_lesson_steps`
+Шаги урока (теория/видео/тест/практика).
+- `id` (TEXT, PK)
+- `lesson_id` (TEXT, NOT NULL)
+- `step_type` (TEXT): `theory` / `video` / `test` / `practical`
+- `order_index` (INTEGER)
+- `payload` (TEXT, nullable): JSON-данные шага
+
+#### `course_practical_submissions`
+Ответы пользователей на практические шаги уроков (с проверкой ИИ).
+- `id` (TEXT, PK)
+- `user_id` (TEXT, NOT NULL)
+- `course_id` (TEXT, NOT NULL)
+- `lesson_id` (TEXT, NOT NULL)
+- `step_id` (TEXT, NOT NULL)
+- `submission_text` (TEXT, NOT NULL)
+- `ai_feedback` (TEXT, nullable): JSON анализ
+- `score` (INTEGER, nullable)
+- `updated_at` (TEXT)
+- UNIQUE(`user_id`, `course_id`, `lesson_id`, `step_id`)
 
 ---
 
@@ -167,6 +433,9 @@ vkr_test/
 | GET | /api/health | Health-check: `{ status, message }` |
 | POST | /api/auth/register | Регистрация. Body: `{ email, password, name }`. Ответ: `{ token, user }` |
 | POST | /api/auth/login | Вход. Body: `{ email, password }`. Ответ: `{ token, user }` |
+| GET | /api/auth/verify-email | Подтверждение email по токену. Query: `token`. Ответ: `{ message }` |
+| POST | /api/auth/forgot-password | Запросить письмо сброса пароля. Body: `{ email }`. Ответ всегда “Если email зарегистрирован…” |
+| POST | /api/auth/reset-password | Сбросить пароль. Body: `{ token, newPassword }`. Ответ: `{ message }` |
 | GET | /api/tasks | Список всех заданий (массив объектов task) |
 | GET | /api/tasks/:id | Одно задание по id |
 | GET | /api/leaderboard | Топ пользователей по очкам (массив: id, name, email, points, level) |
@@ -186,6 +455,25 @@ vkr_test/
 | POST | /api/courses/:id/enroll | Записаться на курс |
 | POST | /api/courses/:courseId/lessons/:lessonId/complete | Отметить урок как пройденный (если у урока нет теста) |
 | POST | /api/courses/:courseId/lessons/:lessonId/quiz/submit | Отправить ответы на тест урока. Body: `{ answers: [0, 1, …] }`. При прохождении (≥80%) урок помечается пройденным |
+| POST | /api/auth/resend-verification | Повторно отправить письмо подтверждения email (требует JWT) |
+
+#### Требование подтверждения email
+
+Некоторые действия доступны только при `users.email_verified_at IS NOT NULL`:
+- `/api/prompts/analyze`
+- `/api/tasks/submit`
+- защищённые действия курсов (enroll/complete/quiz/steps)
+
+Если email не подтверждён — ответ `403`:
+```json
+{ "message": "Подтвердите email, чтобы продолжить.", "code": "EMAIL_NOT_VERIFIED" }
+```
+
+#### Лимиты отправки писем (rate-limit)
+
+Для `forgot-password` и `resend-verification` включён персистентный rate-limit (SQLite). При превышении возвращается `429`:
+- JSON содержит `retryAfterSeconds`
+- также устанавливается HTTP заголовок `Retry-After`
 
 ### 5.3. Админ (JWT + role === 'admin')
 
@@ -245,6 +533,18 @@ vkr_test/
   - Профиль: `profile.html`
   - Лаборатория (анализ промпта): `lab.html`
   - Админка: `admin/dashboard.html`, `admin/tasks.html`, `admin/prompts.html`, `admin/courses.html`, `admin/users.html` и т.д.
+
+### 7.1. Почта и пользовательские сценарии
+
+- **Подтверждение email**
+  - При регистрации бэкенд отправляет письмо со ссылкой на `/profile?verifyToken=...`.
+  - После регистрации фронт редиректит на `/profile?needsEmailVerify=1` и показывает модалку с инструкциями.
+  - Переход по ссылке из письма открывает профиль и автоматически подтверждает email (модалка “подтверждаем…” → “готово”).
+
+- **Забыли пароль**
+  - На `login.html` есть кнопка “Забыли пароль?” → модалка ввода email.
+  - Письмо содержит ссылку на `/login?resetToken=...`.
+  - Страница входа автоматически открывает модалку “Новый пароль”, отправляет `POST /api/auth/reset-password`.
 
 Админ-страницы доступны по путям вида `/admin/...`; проверка роли выполняется при запросах к `/api/admin/*`.
 
@@ -358,12 +658,12 @@ location / {
 Ниже — полный цикл: вы правите код **локально**, затем переносите его на **VPS**, где уже клонирован репозиторий, настроены `backend/.env`, PM2 и nginx.
 
 #### На локальной машине (разработка)
-
+*****************************************************************
 1. **Проверьте работу** приложения локально: `cd backend`, `npm install` при необходимости, `npm start` — откройте в браузере `http://localhost:<PORT>` и убедитесь, что фронт и API ведут себя ожидаемо.
 2. **Зафиксируйте изменения в git** (не коммитьте секреты и не добавляйте в индекс `backend/.env`):
    ```bash
    git status
-   git add <нужные файлы>
+   git add --all
    git commit -m "Краткое описание изменений"
    ```
 3. **Отправьте коммит в общий удалённый репозиторий** (GitHub / GitLab и т.д.):

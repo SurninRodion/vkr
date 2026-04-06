@@ -1,6 +1,6 @@
 import { apiGetTasks, apiGetCompletedTaskIds } from './api.js';
 import { getAuthState } from './auth.js';
-import { showToast, initAuthGate } from './ui.js';
+import { showToast, initAuthGate, requireVerifiedEmailOrRedirect } from './ui.js';
 
 const difficultyLabels = {
   easy: { text: 'Базовый', className: 'tag tag-green' },
@@ -92,6 +92,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!container) return;
 
   if (!initAuthGate()) return;
+  if (!requireVerifiedEmailOrRedirect({ toastMessage: 'Подтвердите email, чтобы открыть практику.' })) return;
 
   const { isAuthenticated } = getAuthState();
 

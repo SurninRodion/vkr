@@ -43,6 +43,7 @@ async function getProfile(req, res) {
       role: user.role || 'user',
       points: user.points,
       level: `Уровень ${user.level}`,
+      emailVerified: Boolean(user.email_verified_at),
       solvedTasks: stats.solvedTasks,
       avgPromptScore: stats.avgPromptScore,
       achievements
@@ -81,6 +82,7 @@ async function updateProfile(req, res) {
       role: updatedUser.role || 'user',
       points: updatedUser.points,
       level: `Уровень ${updatedUser.level}`,
+      emailVerified: Boolean(updatedUser.email_verified_at),
       solvedTasks: stats.solvedTasks,
       avgPromptScore: stats.avgPromptScore,
       achievements

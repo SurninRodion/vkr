@@ -1,6 +1,34 @@
 const API_BASE = '/api';
 const AUTH_STORAGE_KEY = 'promptlearn_auth';
 
+/** Ошибка API с кодом статуса (в т.ч. 429 и retryAfterSeconds). */
+export class ApiError extends Error {
+  constructor(message, { status, retryAfterSeconds } = {}) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
+/** Человекочитаемая длительность до сброса лимита (секунды → «N мин M сек»). */
+export function formatRetryAfterRu(seconds) {
+  const s = Math.max(0, Math.ceil(Number(seconds) || 0));
+  if (s <= 0) return 'через несколько секунд';
+  if (s < 60) return `${s} сек`;
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  if (r === 0) return `${m} мин`;
+  return `${m} мин ${r} сек`;
+}
+
+/** Текст для тоста при 429 на отправку писем. */
+export function rateLimitEmailMessage(err) {
+  if (!(err instanceof ApiError) || err.status !== 429) return null;
+  const wait = formatRetryAfterRu(err.retryAfterSeconds);
+  return `Превышен лимит отправки писем. Повторить можно через ${wait}.`;
+}
+
 function getStoredToken() {
   try {
     const raw = localStorage.getItem(AUTH_STORAGE_KEY);
@@ -32,13 +60,24 @@ async function request(path, { method = 'GET', body, withAuth = true } = {}) {
 
   if (!res.ok) {
     let message = 'API error';
+    let retryAfterSeconds;
     try {
       const data = await res.json();
       message = data.message || message;
+      if (typeof data.retryAfterSeconds === 'number' && Number.isFinite(data.retryAfterSeconds)) {
+        retryAfterSeconds = data.retryAfterSeconds;
+      }
     } catch {
       // ignore
     }
-    throw new Error(message);
+    if (retryAfterSeconds == null && res.status === 429) {
+      const ra = res.headers.get('Retry-After');
+      if (ra) {
+        const n = parseInt(ra, 10);
+        if (Number.isFinite(n)) retryAfterSeconds = n;
+      }
+    }
+    throw new ApiError(message, { status: res.status, retryAfterSeconds });
   }
 
   if (res.status === 204) return null;
@@ -75,6 +114,40 @@ export async function apiRegister(payload) {
     body: payload,
     withAuth: false,
   });
+}
+
+export async function apiResendVerification() {
+  return request('/auth/resend-verification', {
+    method: 'POST',
+    withAuth: true,
+  });
+}
+
+export async function apiVerifyEmail(token) {
+  return request(`/auth/verify-email?token=${encodeURIComponent(token)}`, {
+    method: 'GET',
+    withAuth: false,
+  });
+}
+
+export async function apiForgotPassword(email) {
+  return request('/auth/forgot-password', {
+    method: 'POST',
+    body: { email },
+    withAuth: false,
+  });
+}
+
+export async function apiResetPassword(token, newPassword) {
+  return request('/auth/reset-password', {
+    method: 'POST',
+    body: { token, newPassword },
+    withAuth: false,
+  });
+}
+
+export async function apiGetLibraryPrompts() {
+  return request('/library/prompts', { method: 'GET', withAuth: true });
 }
 
 export async function apiGetTasks() {

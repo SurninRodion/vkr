@@ -1,4 +1,5 @@
-import { showToast, initAuthGate } from './ui.js';
+import { apiGetLibraryPrompts } from './api.js';
+import { showToast, initAuthGate, requireVerifiedEmailOrRedirect } from './ui.js';
 
 const CATEGORY_META = {
   learning: { label: 'Обучение', filter: 'learning', icon: '🧠' },
@@ -144,14 +145,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!grid) return;
 
   if (!initAuthGate()) return;
+  if (!requireVerifiedEmailOrRedirect({ toastMessage: 'Подтвердите email, чтобы открыть библиотеку.' })) return;
 
   let items = [];
   let activeFilter = 'all';
 
   try {
-    const res = await fetch('/api/library/prompts');
-    if (!res.ok) throw new Error('bad status');
-    items = await res.json();
+    items = await apiGetLibraryPrompts();
   } catch (e) {
     console.error(e);
     showToast('Не удалось загрузить библиотеку промптов.', 'error');

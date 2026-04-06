@@ -1,7 +1,15 @@
-import { apiGetProfile, apiUpdateProfile, apiGetMyCourses } from './api.js';
+import {
+  apiGetProfile,
+  apiUpdateProfile,
+  apiGetMyCourses,
+  apiResendVerification,
+  apiVerifyEmail,
+  rateLimitEmailMessage,
+} from './api.js';
 import { getAuthState } from './auth.js';
 import { pluralRu } from './pluralize.js';
 import { showToast } from './ui.js';
+const AUTH_STORAGE_KEY = 'promptlearn_auth';
 
 function escapeHtml(s) {
   const div = document.createElement('div');
@@ -9,7 +17,130 @@ function escapeHtml(s) {
   return div.innerHTML;
 }
 
+function getUrlParams() {
+  try {
+    const url = new URL(window.location.href);
+    return {
+      verifyToken: url.searchParams.get('verifyToken') || '',
+      needsEmailVerify: url.searchParams.get('needsEmailVerify') === '1',
+    };
+  } catch {
+    return { verifyToken: '', needsEmailVerify: false };
+  }
+}
+
+function updateStoredEmailVerified(value) {
+  try {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return;
+    if (!parsed.user || typeof parsed.user !== 'object') return;
+    parsed.user.emailVerified = Boolean(value);
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(parsed));
+    window.dispatchEvent(new CustomEvent('auth:change', { detail: parsed }));
+  } catch {
+    // ignore
+  }
+}
+
+function ensureEmailVerifyModal() {
+  let modal = document.getElementById('email-verify-modal');
+  if (modal) return modal;
+
+  modal = document.createElement('div');
+  modal.className = 'backdrop';
+  modal.id = 'email-verify-modal';
+  modal.setAttribute('aria-hidden', 'true');
+  modal.innerHTML = `
+    <div class="modal">
+      <h3 class="modal-title" id="email-verify-title">Подтверждение email</h3>
+      <p class="modal-body" id="email-verify-body">
+        Мы отправили письмо с ссылкой для подтверждения. Откройте почту (и «Спам») и перейдите по ссылке.
+      </p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" data-email-verify-close>Закрыть</button>
+        <button class="btn btn-primary" type="button" data-email-verify-resend>Отправить письмо ещё раз</button>
+      </div>
+    </div>
+  `;
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.remove('backdrop--visible');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+  });
+
+  document.body.appendChild(modal);
+  return modal;
+}
+
+function openEmailVerifyModal({ title, body, showResend = true } = {}) {
+  const modal = ensureEmailVerifyModal();
+  const titleEl = modal.querySelector('#email-verify-title');
+  const bodyEl = modal.querySelector('#email-verify-body');
+  const resendBtn = modal.querySelector('[data-email-verify-resend]');
+
+  if (titleEl && title) titleEl.textContent = title;
+  if (bodyEl && body) bodyEl.textContent = body;
+  if (resendBtn) resendBtn.style.display = showResend ? '' : 'none';
+
+  const closeBtn = modal.querySelector('[data-email-verify-close]');
+  if (closeBtn && !closeBtn.dataset.bound) {
+    closeBtn.dataset.bound = '1';
+    closeBtn.addEventListener('click', () => {
+      modal.classList.remove('backdrop--visible');
+      modal.setAttribute('aria-hidden', 'true');
+    });
+  }
+
+  if (resendBtn && !resendBtn.dataset.bound) {
+    resendBtn.dataset.bound = '1';
+    resendBtn.addEventListener('click', async () => {
+      resendBtn.classList.add('disabled');
+      try {
+        await apiResendVerification();
+        showToast('Письмо отправлено. Проверьте почту (и «Спам»).', 'success');
+      } catch (err) {
+        console.error(err);
+        const rl = rateLimitEmailMessage(err);
+        showToast(rl || 'Не удалось отправить письмо. Попробуйте позже.', 'error');
+      } finally {
+        resendBtn.classList.remove('disabled');
+      }
+    });
+  }
+
+  modal.classList.add('backdrop--visible');
+  modal.setAttribute('aria-hidden', 'false');
+  return modal;
+}
+
 function renderProfile(root, profile, myCourses = []) {
+  const isVerified = Boolean(profile.emailVerified);
+  const verificationHtml = isVerified
+    ? `
+      <div class="stat-row">
+        <span class="stat-label">Email</span>
+        <span class="stat-value">Подтверждён</span>
+      </div>
+    `
+    : `
+      <div class="stat-row">
+        <span class="stat-label">Email</span>
+        <span class="stat-value">
+          <span style="display:inline-flex; gap: 10px; align-items: center;">
+            <span>Не подтверждён</span>
+            <button class="btn btn-outline btn-sm" type="button" id="resend-verification-btn">Отправить письмо ещё раз</button>
+          </span>
+        </span>
+      </div>
+      <div class="muted" style="margin-top: 8px; font-size: 13px;">
+        Подтверждение email нужно, чтобы пользоваться практикой и анализом промптов.
+      </div>
+    `;
+
   const myCoursesHtml =
     myCourses.length > 0
       ? `
@@ -63,6 +194,7 @@ function renderProfile(root, profile, myCourses = []) {
         <span class="stat-label">Решённые задания</span>
         <span class="stat-value">${profile.solvedTasks}</span>
       </div>
+      ${verificationHtml}
       <div class="stat-row">
         <span class="stat-label">Средняя оценка промптов</span>
         <span class="stat-value">${profile.avgPromptScore.toFixed(1)} / 5</span>
@@ -132,6 +264,7 @@ function renderProfile(root, profile, myCourses = []) {
 
   const form = root.querySelector('#profile-form');
   const saveBtn = root.querySelector('#profile-save-btn');
+  const resendBtn = root.querySelector('#resend-verification-btn');
 
   if (form && saveBtn) {
     form.addEventListener('submit', async (e) => {
@@ -158,6 +291,22 @@ function renderProfile(root, profile, myCourses = []) {
       }
     });
   }
+
+  if (resendBtn) {
+    resendBtn.addEventListener('click', async () => {
+      resendBtn.classList.add('disabled');
+      try {
+        await apiResendVerification();
+        showToast('Письмо отправлено. Проверьте почту (и «Спам»).', 'success');
+      } catch (err) {
+        console.error(err);
+        const rl = rateLimitEmailMessage(err);
+        showToast(rl || 'Не удалось отправить письмо. Попробуйте позже.', 'error');
+      } finally {
+        resendBtn.classList.remove('disabled');
+      }
+    });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -173,6 +322,48 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   try {
+    const { verifyToken, needsEmailVerify } = getUrlParams();
+
+    if (needsEmailVerify) {
+      openEmailVerifyModal();
+    }
+
+    if (verifyToken) {
+      openEmailVerifyModal({
+        title: 'Подтверждаем email…',
+        body: 'Пожалуйста, подождите пару секунд.',
+        showResend: false,
+      });
+
+      try {
+        await apiVerifyEmail(verifyToken);
+        updateStoredEmailVerified(true);
+        openEmailVerifyModal({
+          title: 'Email подтверждён',
+          body: 'Готово. Теперь доступны практика и анализ промптов.',
+          showResend: false,
+        });
+        showToast('Email подтверждён.', 'success');
+      } catch (err) {
+        console.error(err);
+        openEmailVerifyModal({
+          title: 'Не удалось подтвердить email',
+          body: 'Возможно, ссылка устарела. Нажмите «Отправить письмо ещё раз» и попробуйте снова.',
+          showResend: true,
+        });
+      }
+
+      // очистим query-параметры, чтобы при обновлении страницы не повторять запрос
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('verifyToken');
+        url.searchParams.delete('needsEmailVerify');
+        window.history.replaceState({}, '', url.toString());
+      } catch {
+        // ignore
+      }
+    }
+
     const [profile, myCoursesRes] = await Promise.all([
       apiGetProfile(),
       apiGetMyCourses(),

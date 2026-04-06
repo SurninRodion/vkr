@@ -46,6 +46,81 @@ function initDB() {
       }
     );
 
+    db.run(
+      "ALTER TABLE users ADD COLUMN email_verified_at TEXT",
+      (err) => {
+        if (err && !/duplicate column name/i.test(err.message)) {
+          console.error('[DB] Error adding email_verified_at to users table:', err.message);
+        } else if (!err) {
+          console.log('[DB] Added email_verified_at column to users table');
+        }
+      }
+    );
+
+    db.run(
+      `
+        CREATE TABLE IF NOT EXISTS email_verification_tokens (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          token_hash TEXT NOT NULL,
+          expires_at TEXT NOT NULL,
+          used_at TEXT,
+          created_at TEXT DEFAULT (datetime('now')),
+          FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+      `,
+      (err) => {
+        if (err) {
+          console.error('[DB] Error creating email_verification_tokens table:', err.message);
+        } else {
+          console.log('[DB] email_verification_tokens table ready');
+        }
+      }
+    );
+
+    db.run(
+      `
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          token_hash TEXT NOT NULL,
+          expires_at TEXT NOT NULL,
+          used_at TEXT,
+          created_at TEXT DEFAULT (datetime('now')),
+          FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+      `,
+      (err) => {
+        if (err) {
+          console.error('[DB] Error creating password_reset_tokens table:', err.message);
+        } else {
+          console.log('[DB] password_reset_tokens table ready');
+        }
+      }
+    );
+
+    db.run(
+      `
+        CREATE TABLE IF NOT EXISTS auth_rate_limits (
+          id TEXT PRIMARY KEY,
+          scope TEXT NOT NULL,
+          key TEXT NOT NULL,
+          window_start_ms INTEGER NOT NULL,
+          count INTEGER NOT NULL,
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now')),
+          UNIQUE(scope, key)
+        )
+      `,
+      (err) => {
+        if (err) {
+          console.error('[DB] Error creating auth_rate_limits table:', err.message);
+        } else {
+          console.log('[DB] auth_rate_limits table ready');
+        }
+      }
+    );
+
     db.run(`
       CREATE TABLE IF NOT EXISTS tasks (
         id TEXT PRIMARY KEY,

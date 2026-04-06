@@ -33,6 +33,13 @@ app.get(['/admin', '/admin/'], (req, res) => {
   res.redirect(302, '/admin/dashboard');
 });
 
+// Обратная совместимость: старые письма вели на /verify-email?token=...
+app.get(['/verify-email', '/verify-email/'], (req, res) => {
+  const token = (req.query.token || '').toString();
+  if (!token) return res.redirect(302, '/profile?needsEmailVerify=1');
+  return res.redirect(302, `/profile?verifyToken=${encodeURIComponent(token)}`);
+});
+
 // 301: /page.html -> /page, /index.html и */index.html -> без «index» и без .html
 function redirectHtmlToCleanUrl(req, res, next) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();

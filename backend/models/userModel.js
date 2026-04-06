@@ -161,6 +161,46 @@ function updateUserRole(id, role) {
   });
 }
 
+function markEmailVerified(userId) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      `
+        UPDATE users
+        SET email_verified_at = datetime('now')
+        WHERE id = ?
+      `,
+      [userId],
+      function (err) {
+        if (err) {
+          console.error('[UserModel] Error setting email_verified_at:', err.message);
+          return reject(err);
+        }
+        resolve();
+      }
+    );
+  });
+}
+
+function updateUserPasswordHash(userId, password_hash) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      `
+        UPDATE users
+        SET password_hash = ?
+        WHERE id = ?
+      `,
+      [password_hash, userId],
+      function (err) {
+        if (err) {
+          console.error('[UserModel] Error updating password_hash:', err.message);
+          return reject(err);
+        }
+        resolve();
+      }
+    );
+  });
+}
+
 function deleteUser(id) {
   return new Promise((resolve, reject) => {
     db.run(
@@ -190,6 +230,8 @@ module.exports = {
   getAllUsers,
   updateUserLastSeen,
   updateUserRole,
+  markEmailVerified,
+  updateUserPasswordHash,
   deleteUser
 };
 
