@@ -1,4 +1,123 @@
 const db = require('./db');
+const path = require('path');
+const fs = require('fs');
+const { v4: uuidv4 } = require('uuid');
+
+function safeJsonParse(raw, fallback) {
+  try {
+    return JSON.parse(raw);
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function seedCourseFromJsonFile(absPath, done) {
+  const raw = fs.readFileSync(absPath, 'utf8');
+  const course = safeJsonParse(raw, null);
+  if (!course?.title) return done();
+
+  db.get('SELECT id FROM courses WHERE title = ? LIMIT 1', [course.title], (err, row) => {
+    if (err) return done();
+    if (row?.id) return done();
+
+    const courseId = uuidv4();
+    db.run(
+      'INSERT INTO courses (id, title, description) VALUES (?, ?, ?)',
+      [courseId, String(course.title).trim(), String(course.description ?? '')],
+      (errIns) => {
+        if (errIns) return done();
+
+        const modules = Array.isArray(course.modules) ? course.modules : [];
+        const modStmt = db.prepare(
+          'INSERT INTO course_modules (id, course_id, title, order_index) VALUES (?, ?, ?, ?)'
+        );
+        const lessonStmt = db.prepare(
+          'INSERT INTO course_lessons (id, course_id, module_id, title, content, order_index) VALUES (?, ?, ?, ?, ?, ?)'
+        );
+        const stepStmt = db.prepare(
+          'INSERT INTO course_lesson_steps (id, lesson_id, step_type, order_index, payload) VALUES (?, ?, ?, ?, ?)'
+        );
+        const quizStmt = db.prepare(
+          'INSERT INTO course_quiz_questions (id, lesson_id, question_text, options, correct_index, order_index) VALUES (?, ?, ?, ?, ?, ?)'
+        );
+
+        const insertedLessonIds = [];
+        modules.forEach((m, mi) => {
+          const modId = uuidv4();
+          modStmt.run(modId, courseId, String(m?.title || `Модуль ${mi + 1}`), mi);
+
+          const lessons = Array.isArray(m?.lessons) ? m.lessons : [];
+          lessons.forEach((l, li) => {
+            if (!l?.title) return;
+            const lessonId = uuidv4();
+            insertedLessonIds.push(lessonId);
+            lessonStmt.run(
+              lessonId,
+              courseId,
+              modId,
+              String(l.title).trim(),
+              String(l.content ?? ''),
+              typeof l.order_index === 'number' ? l.order_index : li
+            );
+
+            const steps = Array.isArray(l.steps) ? l.steps : [];
+            steps.forEach((s, si) => {
+              const stepType = ['theory', 'video', 'test', 'practical'].includes(s?.step_type)
+                ? s.step_type
+                : 'theory';
+              const payload =
+                typeof s?.payload === 'object' && s.payload !== null ? JSON.stringify(s.payload) : '{}';
+              stepStmt.run(
+                uuidv4(),
+                lessonId,
+                stepType,
+                typeof s?.order_index === 'number' ? s.order_index : si,
+                payload
+              );
+            });
+
+            const quiz = Array.isArray(l.quiz_questions) ? l.quiz_questions : [];
+            quiz.forEach((q, qi) => {
+              if (!q?.question_text || !Array.isArray(q.options) || q.options.length < 2) return;
+              const correctIndex = Math.max(
+                0,
+                Math.min(Number(q.correct_index ?? 0) || 0, q.options.length - 1)
+              );
+              quizStmt.run(
+                uuidv4(),
+                lessonId,
+                String(q.question_text).trim(),
+                JSON.stringify(q.options),
+                correctIndex,
+                typeof q.order_index === 'number' ? q.order_index : qi
+              );
+            });
+          });
+        });
+
+        modStmt.finalize(() => {
+          lessonStmt.finalize(() => {
+            stepStmt.finalize(() => {
+              quizStmt.finalize(() => done());
+            });
+          });
+        });
+      }
+    );
+  });
+}
+
+function seedCourses() {
+  try {
+    const seedPath = path.join(__dirname, 'seed', 'courses', 'prompt-engineering-basics.ru.json');
+    if (!fs.existsSync(seedPath)) return;
+    seedCourseFromJsonFile(seedPath, () => {
+      console.log('[DB] Seeded course:', 'Основы промпт-инжиниринга');
+    });
+  } catch (e) {
+    console.error('[DB] Error seeding courses:', e.message);
+  }
+}
 
 function initDB() {
   console.log('[DB] Initializing database schema...');
@@ -338,6 +457,28 @@ function initDB() {
       }
     );
 
+    // Видео-ресурсы уроков (загрузки из конструктора для шагов типа "video")
+    db.run(
+      `
+        CREATE TABLE IF NOT EXISTS course_lesson_videos (
+          id TEXT PRIMARY KEY,
+          lesson_id TEXT NOT NULL,
+          file_path TEXT NOT NULL,
+          original_name TEXT NOT NULL,
+          mime_type TEXT,
+          created_at TEXT DEFAULT (datetime('now')),
+          FOREIGN KEY (lesson_id) REFERENCES course_lessons(id)
+        )
+      `,
+      (err) => {
+        if (err) {
+          console.error('[DB] Error creating course_lesson_videos table:', err.message);
+        } else {
+          console.log('[DB] course_lesson_videos table ready');
+        }
+      }
+    );
+
     // Вопросы закрепляющего теста к уроку (урок считается пройденным только после прохождения теста)
     db.run(
       `
@@ -427,6 +568,52 @@ function initDB() {
       }
     );
 
+    // ===== CERTIFICATES (Course completion) =====
+    db.run(
+      `
+        CREATE TABLE IF NOT EXISTS course_certificate_templates (
+          course_id TEXT PRIMARY KEY,
+          enabled INTEGER DEFAULT 0,
+          title TEXT,
+          template_html TEXT,
+          template_css TEXT,
+          updated_at TEXT DEFAULT (datetime('now')),
+          FOREIGN KEY (course_id) REFERENCES courses(id)
+        )
+      `,
+      (err) => {
+        if (err) {
+          console.error('[DB] Error creating course_certificate_templates table:', err.message);
+        } else {
+          console.log('[DB] course_certificate_templates table ready');
+        }
+      }
+    );
+
+    db.run(
+      `
+        CREATE TABLE IF NOT EXISTS course_certificates (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          course_id TEXT NOT NULL,
+          serial TEXT,
+          issued_at TEXT DEFAULT (datetime('now')),
+          rendered_html TEXT NOT NULL,
+          meta_json TEXT,
+          UNIQUE(user_id, course_id),
+          FOREIGN KEY (user_id) REFERENCES users(id),
+          FOREIGN KEY (course_id) REFERENCES courses(id)
+        )
+      `,
+      (err) => {
+        if (err) {
+          console.error('[DB] Error creating course_certificates table:', err.message);
+        } else {
+          console.log('[DB] course_certificates table ready');
+        }
+      }
+    );
+
     // Расширение course_lessons: привязка к модулю
     db.run(
       "ALTER TABLE course_lessons ADD COLUMN module_id TEXT REFERENCES course_modules(id)",
@@ -438,6 +625,9 @@ function initDB() {
         }
       }
     );
+
+    // Seed demo courses (idempotent by title)
+    seedCourses();
   });
 }
 

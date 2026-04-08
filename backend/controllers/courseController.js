@@ -2,6 +2,337 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../db/db');
 const { analyzePrompt } = require('../utils/aiAnalyzer');
 
+function escapeHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function defaultCertificateTemplate(courseTitle) {
+  return {
+    enabled: 1,
+    title: `Сертификат: ${courseTitle || 'Курс'}`,
+    template_css: `
+      @page { size: A4 landscape; margin: 0; }
+      :root { --ink:#0b1220; --muted:#334155; --accent:#1d4ed8; --accent2:#7c3aed; --paper:#ffffff; --stamp:#0f3b8f; }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body { margin:0; background: #fff; font-family: Inter, Arial, sans-serif; color: var(--ink); }
+
+      .page {
+        width: 297mm;
+        height: 210mm;
+        margin: 0;
+        background: var(--paper);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .bg {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(1200px 520px at 10% 0%, rgba(29,78,216,.12), transparent 60%),
+          radial-gradient(900px 520px at 92% 8%, rgba(124,58,237,.10), transparent 60%),
+          radial-gradient(900px 520px at 84% 96%, rgba(29,78,216,.06), transparent 55%);
+        pointer-events: none;
+      }
+
+      /* Без “карточной” рамки и скруглений: лист выглядит корректно при печати */
+      .paper {
+        position: absolute;
+        inset: 0;
+      }
+
+      .content {
+        position: relative;
+        height: 100%;
+        padding: 18mm 20mm;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .top {
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap: 18mm;
+      }
+
+      .brand {
+        font-weight: 800;
+        letter-spacing: .4px;
+        font-size: 18px;
+      }
+      .brand .a { color: var(--accent); }
+      .brand .b { color: var(--accent2); }
+
+      .meta {
+        text-align:right;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+      }
+      .meta strong { color: var(--ink); font-weight: 700; }
+
+      .hero {
+        margin-top: 14mm;
+      }
+      .title {
+        font-size: 44px;
+        font-weight: 800;
+        letter-spacing: .2px;
+        margin: 0;
+      }
+      .subtitle {
+        margin: 4mm 0 0;
+        font-size: 16px;
+        color: var(--muted);
+      }
+
+      .name {
+        margin-top: 14mm;
+        font-size: 34px;
+        font-weight: 800;
+        letter-spacing: .2px;
+      }
+      .course {
+        margin-top: 3mm;
+        font-size: 20px;
+        color: var(--ink);
+      }
+
+      .line {
+        margin-top: 8mm;
+        height: 1px;
+        background: linear-gradient(90deg, rgba(37,99,235,.0), rgba(37,99,235,.35), rgba(124,58,237,.25), rgba(124,58,237,0));
+      }
+
+      .footer {
+        margin-top: auto;
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-end;
+        gap: 12mm;
+        padding-top: 10mm;
+      }
+
+      .sig {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .sig strong {
+        display:block;
+        color: var(--ink);
+        font-size: 13px;
+        margin-bottom: 3mm;
+      }
+
+      /* Печать сервиса (SVG, без наложений, как настоящая) */
+      .stamp {
+        width: 42mm;
+        height: 42mm;
+        opacity: .92;
+      }
+      .stamp svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      .stamp .stroke { stroke: rgba(15,59,143,.72); }
+      .stamp .stroke2 { stroke: rgba(15,59,143,.35); }
+      .stamp .fillSoft { fill: rgba(15,59,143,.06); }
+      .stamp .textRing { fill: rgba(15,59,143,.86); font-weight: 700; letter-spacing: .22em; }
+      .stamp .textCenter { fill: rgba(15,59,143,.92); font-weight: 800; letter-spacing: .10em; }
+      .stamp .muted { fill: rgba(15,59,143,.70); font-weight: 700; letter-spacing: .18em; }
+
+      @media print {
+        body { background: #fff; }
+      }
+    `.trim(),
+    template_html: `
+      <div class="page">
+        <div class="bg"></div>
+        <div class="paper">
+          <div class="content">
+            <div class="top">
+              <div class="brand">Prompt <span class="a">Academy</span> <span class="b">Certificate</span></div>
+              <div class="meta">
+                <div>Серийный №: <strong>{{serial}}</strong></div>
+                <div>Дата выдачи: <strong>{{issued_date}}</strong></div>
+              </div>
+            </div>
+
+            <div class="hero">
+              <h1 class="title">Сертификат</h1>
+              <p class="subtitle">Подтверждает успешное прохождение курса</p>
+            </div>
+
+            <div class="name">{{user_name}}</div>
+            <div class="course">«{{course_title}}»</div>
+            <div class="line"></div>
+
+            <div class="footer">
+              <div class="sig">
+                <strong>Prompt Academy</strong>
+                Обучающая платформа по промпт-инжинирингу
+              </div>
+              <div class="stamp" aria-label="Печать сервиса">
+                <svg viewBox="0 0 200 200" aria-hidden="true">
+                  <defs>
+                    <path id="ringTop" d="M 100,18 A 82,82 0 0 1 182,100" />
+                    <path id="ringBottom" d="M 182,100 A 82,82 0 0 1 100,182 A 82,82 0 0 1 18,100" />
+                  </defs>
+
+                  <circle cx="100" cy="100" r="92" class="stroke" fill="none" stroke-width="6" />
+                  <circle cx="100" cy="100" r="78" class="stroke2" fill="none" stroke-width="3" />
+                  <circle cx="100" cy="100" r="62" class="stroke2 fillSoft" stroke-width="2" />
+
+                  <text font-size="10" class="textRing">
+                    <textPath href="#ringTop" startOffset="2%">PROMPT ACADEMY</textPath>
+                  </text>
+                  <text font-size="10" class="textRing">
+                    <textPath href="#ringBottom" startOffset="8%">CERTIFIED • COURSE COMPLETION</textPath>
+                  </text>
+
+                  <circle cx="100" cy="100" r="42" class="stroke2" fill="none" stroke-width="2" />
+                  <text x="100" y="92" text-anchor="middle" font-size="12" class="textCenter">CERTIFICATE</text>
+                  <text x="100" y="112" text-anchor="middle" font-size="10" class="muted">PROMPT ACADEMY</text>
+                  <text x="100" y="134" text-anchor="middle" font-size="16" class="stroke" fill="none" stroke-width="0">
+                    ★ ★ ★
+                  </text>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `.trim(),
+  };
+}
+
+function renderCertificateHtml({ template_html, template_css }, meta) {
+  const safe = {
+    user_name: escapeHtml(meta.user_name),
+    course_title: escapeHtml(meta.course_title),
+    issued_date: escapeHtml(meta.issued_date),
+    serial: escapeHtml(meta.serial),
+  };
+  const htmlBody = String(template_html || '')
+    .replace(/\{\{\s*user_name\s*\}\}/g, safe.user_name)
+    .replace(/\{\{\s*course_title\s*\}\}/g, safe.course_title)
+    .replace(/\{\{\s*issued_date\s*\}\}/g, safe.issued_date)
+    .replace(/\{\{\s*serial\s*\}\}/g, safe.serial);
+
+  return `<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${safe.course_title} — сертификат</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+    <style>${String(template_css || '')}</style>
+  </head>
+  <body>
+    ${htmlBody}
+  </body>
+</html>`;
+}
+
+function maybeIssueCertificateForCourse(userId, courseId, done) {
+  db.get(
+    `
+      SELECT
+        (SELECT COUNT(*) FROM course_lessons WHERE course_id = ?) AS totalLessons,
+        (
+          SELECT COUNT(*)
+          FROM course_lesson_progress p
+          JOIN course_lessons cl ON cl.id = p.lesson_id
+          WHERE p.user_id = ? AND cl.course_id = ?
+        ) AS completedLessons
+    `,
+    [courseId, userId, courseId],
+    (err, row) => {
+      if (err) return done(err);
+      const totalLessons = Number(row?.totalLessons || 0);
+      const completedLessons = Number(row?.completedLessons || 0);
+      if (!totalLessons || completedLessons < totalLessons) return done(null, { issued: false });
+
+      db.get(
+        'SELECT id FROM course_certificates WHERE user_id = ? AND course_id = ?',
+        [userId, courseId],
+        (err2, existing) => {
+          if (err2) return done(err2);
+          if (existing?.id) return done(null, { issued: false, certificateId: existing.id });
+
+          db.get('SELECT id, name FROM users WHERE id = ?', [userId], (errU, user) => {
+            if (errU) return done(errU);
+            db.get('SELECT id, title FROM courses WHERE id = ?', [courseId], (errC, course) => {
+              if (errC) return done(errC);
+              if (!course) return done(null, { issued: false });
+
+              db.get(
+                'SELECT course_id, enabled, title, template_html, template_css FROM course_certificate_templates WHERE course_id = ?',
+                [courseId],
+                (errT, tpl) => {
+                  if (errT) return done(errT);
+
+                  const ensureTpl = (cb) => {
+                    if (tpl) return cb(null, tpl);
+                    const def = defaultCertificateTemplate(course.title);
+                    db.run(
+                      `INSERT OR REPLACE INTO course_certificate_templates (course_id, enabled, title, template_html, template_css, updated_at)
+                       VALUES (?, ?, ?, ?, ?, datetime('now'))`,
+                      [courseId, def.enabled, def.title, def.template_html, def.template_css],
+                      (insErr) => {
+                        if (insErr) return cb(insErr);
+                        return cb(null, { course_id: courseId, ...def });
+                      }
+                    );
+                  };
+
+                  ensureTpl((errEns, finalTpl) => {
+                    if (errEns) return done(errEns);
+                    const enabled = Number(finalTpl?.enabled ?? 1);
+                    if (!enabled) return done(null, { issued: false });
+
+                    const certificateId = uuidv4();
+                    const serial = `${String(courseId).slice(0, 8).toUpperCase()}-${Date.now()
+                      .toString(36)
+                      .toUpperCase()}`;
+                    const issuedDate = new Date().toLocaleDateString('ru-RU');
+                    const meta = {
+                      user_name: user?.name || 'Пользователь',
+                      course_title: course.title || 'Курс',
+                      issued_date: issuedDate,
+                      serial,
+                    };
+                    const rendered = renderCertificateHtml(finalTpl, meta);
+                    db.run(
+                      `INSERT INTO course_certificates (id, user_id, course_id, serial, issued_at, rendered_html, meta_json)
+                       VALUES (?, ?, ?, ?, datetime('now'), ?, ?)`,
+                      [certificateId, userId, courseId, serial, rendered, JSON.stringify(meta)],
+                      (errIns) => {
+                        if (errIns) return done(errIns);
+                        return done(null, { issued: true, certificateId });
+                      }
+                    );
+                  });
+                }
+              );
+            });
+          });
+        }
+      );
+    }
+  );
+}
+
 function buildPracticalPromptForAi(payload, userText) {
   const title = (payload.title || 'Практическое задание').trim();
   const desc = (payload.description || '').trim();
@@ -257,7 +588,9 @@ function completeLesson(req, res) {
                 console.error('[CourseController] completeLesson insert error:', err2.message);
                 return res.status(500).json({ message: 'Ошибка сохранения прогресса' });
               }
-              res.json({ message: 'Урок отмечен как пройденный', lessonId });
+              maybeIssueCertificateForCourse(userId, courseId, () => {
+                res.json({ message: 'Урок отмечен как пройденный', lessonId });
+              });
             }
           );
         }
@@ -318,11 +651,13 @@ function submitQuiz(req, res) {
             [userId, lessonId],
             function (err3) {
               if (err3) return res.status(500).json({ message: 'Ошибка сохранения прогресса' });
-              res.json({
-                passed: true,
-                score: Math.round(score * 100),
-                total,
-                message: 'Тест пройден. Урок завершён.'
+              maybeIssueCertificateForCourse(userId, courseId, () => {
+                res.json({
+                  passed: true,
+                  score: Math.round(score * 100),
+                  total,
+                  message: 'Тест пройден. Урок завершён.'
+                });
               });
             }
           );
@@ -515,6 +850,115 @@ function getCourseProgress(req, res) {
 }
 
 /**
+ * Сертификаты текущего пользователя (для профиля).
+ */
+function getMyCertificates(req, res) {
+  const userId = req.user.id;
+  db.all(
+    `
+      SELECT cc.id, cc.course_id AS courseId, cc.serial, cc.issued_at AS issuedAt, c.title AS courseTitle
+      FROM course_certificates cc
+      JOIN courses c ON c.id = cc.course_id
+      WHERE cc.user_id = ?
+      ORDER BY cc.issued_at DESC
+    `,
+    [userId],
+    (err, rows) => {
+      if (err) {
+        console.error('[CourseController] getMyCertificates error:', err.message);
+        return res.status(500).json({ message: 'Ошибка получения сертификатов' });
+      }
+      const list = (rows || []).map((r) => ({
+        id: r.id,
+        courseId: r.courseId,
+        courseTitle: r.courseTitle,
+        serial: r.serial,
+        issuedAt: r.issuedAt,
+      }));
+      res.json({ certificates: list });
+    }
+  );
+}
+
+/**
+ * HTML сертификата по id (только владелец).
+ */
+function getMyCertificateHtml(req, res) {
+  const userId = req.user.id;
+  const { id } = req.params;
+  db.get(
+    `SELECT id, rendered_html FROM course_certificates WHERE id = ? AND user_id = ?`,
+    [id, userId],
+    (err, row) => {
+      if (err) return res.status(500).json({ message: 'Ошибка получения сертификата' });
+      if (!row) return res.status(404).json({ message: 'Сертификат не найден' });
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.status(200).send(row.rendered_html);
+    }
+  );
+}
+
+/**
+ * PDF сертификата по id (только владелец).
+ * Генерируется на сервере (Chromium/Playwright), чтобы гарантировать корректный результат.
+ */
+function getMyCertificatePdf(req, res) {
+  const userId = req.user.id;
+  const { id } = req.params;
+
+  db.get(
+    `SELECT id, rendered_html, serial FROM course_certificates WHERE id = ? AND user_id = ?`,
+    [id, userId],
+    async (err, row) => {
+      if (err) return res.status(500).json({ message: 'Ошибка получения сертификата' });
+      if (!row) return res.status(404).json({ message: 'Сертификат не найден' });
+
+      let chromium;
+      try {
+        chromium = require('playwright').chromium;
+      } catch (e) {
+        return res.status(500).json({
+          message:
+            'PDF генератор не установлен. Установите зависимости бэкенда и браузеры Playwright (npm i && npx playwright install).',
+        });
+      }
+
+      let browser;
+      try {
+        browser = await chromium.launch();
+        const page = await browser.newPage({ viewport: { width: 1123, height: 794 } }); // A4 landscape @96dpi approx
+        await page.setContent(String(row.rendered_html || ''), { waitUntil: 'networkidle' });
+        await page.evaluate(async () => {
+          try {
+            // eslint-disable-next-line no-undef
+            if (document.fonts && document.fonts.ready) await document.fonts.ready;
+          } catch (_) {}
+        });
+        const pdfBuffer = await page.pdf({
+          format: 'A4',
+          landscape: true,
+          printBackground: true,
+          margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' },
+          preferCSSPageSize: true,
+        });
+
+        const safeSerial = String(row.serial || 'certificate').replace(/[\\/:*?"<>|]+/g, '-');
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="certificate-${safeSerial}.pdf"`);
+        return res.status(200).send(pdfBuffer);
+      } catch (e) {
+        console.error('[CourseController] getMyCertificatePdf error:', e.message);
+        return res.status(500).json({ message: 'Ошибка генерации PDF' });
+      } finally {
+        try {
+          if (browser) await browser.close();
+        } catch (_) {}
+      }
+    }
+  );
+}
+
+/**
  * Отправка ответа на практический шаг: проверка через GigaChat (как в разделе «Практика»), сохранение текста и фидбека.
  */
 function submitPracticalStep(req, res) {
@@ -661,4 +1105,7 @@ module.exports = {
   getCourseProgress,
   checkStepAnswer,
   submitPracticalStep,
+  getMyCertificates,
+  getMyCertificateHtml,
+  getMyCertificatePdf,
 };

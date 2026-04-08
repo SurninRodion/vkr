@@ -71,10 +71,23 @@ function renderStepBlock(step, stepIndex, lessonId, courseId, practicalSaved, pr
       const url = (p.url || '').trim();
       const ytWatchMatch = url.match(new RegExp('youtube\\.com/watch\\?v=([^&]+)'));
       const ytBeMatch = url.match(new RegExp('youtu\\.be/([^?]+)'));
-      const embedUrl = ytWatchMatch ? `https://www.youtube.com/embed/${ytWatchMatch[1]}` : ytBeMatch ? `https://www.youtube.com/embed/${ytBeMatch[1]}` : url;
+      const embedUrl = ytWatchMatch
+        ? `https://www.youtube.com/embed/${ytWatchMatch[1]}`
+        : ytBeMatch
+          ? `https://www.youtube.com/embed/${ytBeMatch[1]}`
+          : url;
+      const isFileVideo =
+        /^\/uploads\//i.test(url) ||
+        /\.(mp4|webm|ogg|mov|m4v)(\?|#|$)/i.test(url);
       inner = `
         <h4 class="lesson-step-title">${escapeHtml(p.title || 'Видео')}</h4>
-        ${url ? `<div class="lesson-step-video-wrap"><iframe src="${escapeHtml(embedUrl)}" title="${escapeHtml(p.title || '')}" allowfullscreen></iframe></div>` : ''}
+        ${
+          url
+            ? isFileVideo
+              ? `<div class="lesson-step-video-wrap"><video controls preload="metadata" src="${escapeHtml(url)}"></video></div>`
+              : `<div class="lesson-step-video-wrap"><iframe src="${escapeHtml(embedUrl)}" title="${escapeHtml(p.title || '')}" allowfullscreen></iframe></div>`
+            : ''
+        }
         ${p.description ? `<p class="lesson-step-desc">${nl2br(p.description)}</p>` : ''}
       `;
       break;
@@ -330,6 +343,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const root = document.getElementById('course-root');
   if (!root) return;
 
+  function syncProgramSidebarHeight() {
+    const sidebar = root.querySelector('.course-nav-sidebar');
+    const content = root.querySelector('.profile-main');
+    if (!sidebar || !content) return;
+    const h = Math.max(240, Math.round(content.getBoundingClientRect().height || 0));
+    sidebar.style.setProperty('--course-nav-max-h', `${h}px`);
+  }
+
   const courseId = getCourseId();
   if (!courseId) {
     root.innerHTML = '<p class="muted">Курс не выбран. <a href="/courses">Перейти к списку курсов</a></p>';
@@ -353,9 +374,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     const completedSet = new Set(progress.completedLessonIds || []);
     const practicalMap = buildPracticalMap(progress);
-    const viewModuleId = getModuleId();
-    const viewLessonId = getLessonId();
-    const viewStepId = getStepId();
+    let viewModuleId = getModuleId();
+    let viewLessonId = getLessonId();
+    let viewStepId = getStepId();
 
     const modulesForNav = (course.modules && course.modules.length > 0)
       ? course.modules
@@ -409,6 +430,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     const lessonsListFull = (course.modules && course.modules.length > 0)
       ? course.modules.flatMap((mod, mi) => (mod.lessons || []).map((l) => ({ lesson: l, moduleIndex: mi + 1, moduleId: mod.id, moduleTitle: mod.title || `Модуль ${mi + 1}` })))
       : (course.lessons || []).map((lesson, i) => ({ lesson, moduleIndex: i + 1, moduleId: null, moduleTitle: `Модуль ${i + 1}` }));
+
+    function computeAllowedLessonIds() {
+      if (!progress.enrolled) return new Set();
+      const ordered = lessonsListFull.map((x) => x.lesson?.id).filter(Boolean);
+      if (!ordered.length) return new Set();
+      const firstNotDone = ordered.find((id) => !completedSet.has(id)) || null;
+      const allowUpTo = firstNotDone ? ordered.indexOf(firstNotDone) : ordered.length - 1;
+      const allowed = new Set();
+      ordered.forEach((id, idx) => {
+        if (idx <= allowUpTo) allowed.add(id);
+      });
+      return allowed;
+    }
+
+    function pickNextAllowedLessonId() {
+      const ordered = lessonsListFull.map((x) => x.lesson?.id).filter(Boolean);
+      if (!ordered.length) return '';
+      return ordered.find((id) => !completedSet.has(id)) || ordered[0] || '';
+    }
+
+    // Гейт: пока пользователь НЕ записан на курс — показываем только обзор.
+    if (!progress.enrolled) {
+      viewModuleId = '';
+      viewLessonId = '';
+      viewStepId = '';
+    }
+
+    let allowedLessonIds = computeAllowedLessonIds();
 
     let lessonsList = lessonsListFull;
     if (viewLessonId) {
@@ -475,10 +524,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const lessonsHtml = lessonsList
       .map(({ lesson, moduleIndex, moduleTitle }, i) => {
         const isCompleted = completedSet.has(lesson.id);
+        const isLocked = !progress.enrolled || (allowedLessonIds.size && !allowedLessonIds.has(lesson.id));
         const lessonHasQuiz = hasQuiz(lesson);
         const lessonHasSteps = hasSteps(lesson);
         let completeBtn = '';
-        if (!lessonHasSteps) {
+        if (!isLocked && !lessonHasSteps) {
           if (progress.enrolled && !isCompleted) {
             completeBtn = lessonHasQuiz
               ? `<button type="button" class="btn btn-outline btn-sm lesson-quiz-trigger" data-lesson-id="${escapeHtml(lesson.id)}">Пройти тест</button>`
@@ -487,11 +537,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             completeBtn = '<span class="tag tag-green">Пройден</span>';
           }
         }
-        const contentHtml = !lessonHasSteps && lesson.content
+        const lockedHintHtml = isLocked
+          ? `<p class="course-lesson-locked-hint">🔒 Этот урок откроется последовательно после прохождения предыдущих.</p>`
+          : '';
+        const contentHtml = !isLocked && !lessonHasSteps && lesson.content
           ? `<div class="lesson-content">${escapeHtml(lesson.content)}</div>`
           : '';
-        const attHtml = attachmentsHtml(lesson.attachments);
-        const quizBlock = !lessonHasSteps && lessonHasQuiz && progress.enrolled && !isCompleted
+        const attHtml = !isLocked ? attachmentsHtml(lesson.attachments) : '';
+        const quizBlock = !isLocked && !lessonHasSteps && lessonHasQuiz && progress.enrolled && !isCompleted
             ? `
           <div class="lesson-quiz-block" data-lesson-id="${escapeHtml(lesson.id)}" style="display:none;">
             <div class="quiz-questions">
@@ -521,7 +574,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
         `
             : '';
-        const stepsHtml = lessonHasSteps
+        const stepsHtml = !isLocked && lessonHasSteps
           ? renderLessonSteps(
               lesson,
               i,
@@ -533,14 +586,17 @@ document.addEventListener('DOMContentLoaded', async () => {
               isAuthenticated
             )
           : '';
-        const navHtml = renderLessonNavRow(courseId, lessonsListFull, lesson.id, viewLessonId, viewStepId);
+        const navHtml = !isLocked
+          ? renderLessonNavRow(courseId, lessonsListFull, lesson.id, viewLessonId, viewStepId)
+          : '';
         return `
-        <li class="course-lesson-item" data-lesson-id="${escapeHtml(lesson.id)}">
+        <li class="course-lesson-item${isLocked ? ' course-lesson-item--locked' : ''}" data-lesson-id="${escapeHtml(lesson.id)}">
           <div class="course-lesson-header">
             <span class="stat-label">${escapeHtml(moduleTitle || `Модуль ${moduleIndex}`)}</span>
             <span class="stat-value">${escapeHtml(lesson.title)}</span>
-            ${!lessonHasSteps ? completeBtn : ''}
+            ${isLocked ? '<span class="tag">🔒 Закрыт</span>' : (!lessonHasSteps ? completeBtn : '')}
           </div>
+          ${lockedHintHtml}
           ${contentHtml}
           ${attHtml}
           ${quizBlock}
@@ -604,6 +660,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
         <div class="filters">
           <span class="tag tag-green">${totalLessons} ${pluralRu(totalLessons, ['урок', 'урока', 'уроков'])}</span>
+          ${
+            isAuthenticated && !progress.enrolled
+              ? `<button type="button" class="btn btn-primary btn-sm" id="course-enroll-btn">Записаться на курс</button>`
+              : ''
+          }
         </div>
       </div>
 
@@ -623,6 +684,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
       </div>
     `;
+
+    // Sidebar should match content window height; overflow scrolls inside.
+    syncProgramSidebarHeight();
+    window.addEventListener('resize', () => syncProgramSidebarHeight());
+    applySequentialLocksToProgram();
 
     const enrollBtn = root.querySelector('#course-enroll-btn');
     if (enrollBtn) {
@@ -649,7 +715,49 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
 
+    function applySequentialLocksToProgram() {
+      const allLinks = root.querySelectorAll('.course-nav-wrap a.course-nav-link');
+      allLinks.forEach((a) => {
+        const href = a.getAttribute('href') || '';
+        if (!href) return;
+        let locked = false;
+        try {
+          const u = new URL(href, window.location.href);
+          const lid = u.searchParams.get('lesson') || '';
+          const isOverview = !u.searchParams.get('module') && !lid;
+          if (isOverview) locked = false;
+          else if (!progress.enrolled) locked = true;
+          else if (lid && !allowedLessonIds.has(lid)) locked = true;
+        } catch (_) {}
+
+        if (locked) {
+          a.dataset.locked = '1';
+          a.setAttribute('aria-disabled', 'true');
+          a.setAttribute('tabindex', '-1');
+          a.classList.add('course-nav-link--locked');
+        } else {
+          a.removeAttribute('data-locked');
+          a.removeAttribute('aria-disabled');
+          a.removeAttribute('tabindex');
+          a.classList.remove('course-nav-link--locked');
+        }
+      });
+    }
+
     function updateContentView(moduleId, lessonId, stepId, replace) {
+      // Гейт (не записан) — всегда только обзор
+      if (!progress.enrolled) {
+        moduleId = '';
+        lessonId = '';
+        stepId = '';
+      } else if (lessonId && !allowedLessonIds.has(lessonId)) {
+        // Последовательное открытие: редиректим на ближайший доступный урок
+        const nextAllowed = pickNextAllowedLessonId();
+        moduleId = '';
+        lessonId = nextAllowed || '';
+        stepId = '';
+      }
+
       let list = lessonsListFull;
       if (lessonId) list = list.filter(({ lesson }) => lesson.id === lessonId);
       else if (moduleId) {
@@ -675,6 +783,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const breadcrumbWrap = document.getElementById('course-breadcrumb-wrap');
       if (breadcrumbWrap) breadcrumbWrap.innerHTML = breadcrumbHtmlNew;
       setActiveNavLink();
+      applySequentialLocksToProgram();
 
       const sectionTitleNew = isOverview
         ? 'Содержание и описание'
@@ -704,10 +813,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       `;
       const lessonsHtmlNew = list.map(({ lesson, moduleIndex, moduleTitle }, i) => {
         const isCompleted = completedSet.has(lesson.id);
+        const isLocked = !progress.enrolled || (allowedLessonIds.size && !allowedLessonIds.has(lesson.id));
         const lessonHasQuiz = hasQuiz(lesson);
         const lessonHasSteps = hasSteps(lesson);
         let completeBtn = '';
-        if (!lessonHasSteps) {
+        if (!isLocked && !lessonHasSteps) {
           if (progress.enrolled && !isCompleted) {
             completeBtn = lessonHasQuiz
               ? `<button type="button" class="btn btn-outline btn-sm lesson-quiz-trigger" data-lesson-id="${escapeHtml(lesson.id)}">Пройти тест</button>`
@@ -716,9 +826,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             completeBtn = '<span class="tag tag-green">Пройден</span>';
           }
         }
-        const contentHtml = !lessonHasSteps && lesson.content ? `<div class="lesson-content">${escapeHtml(lesson.content)}</div>` : '';
-        const attHtml = attachmentsHtml(lesson.attachments);
-        const quizBlock = !lessonHasSteps && lessonHasQuiz && progress.enrolled && !isCompleted ? `
+        const lockedHintHtml = isLocked
+          ? `<p class="course-lesson-locked-hint">🔒 Этот урок откроется последовательно после прохождения предыдущих.</p>`
+          : '';
+        const contentHtml = !isLocked && !lessonHasSteps && lesson.content ? `<div class="lesson-content">${escapeHtml(lesson.content)}</div>` : '';
+        const attHtml = !isLocked ? attachmentsHtml(lesson.attachments) : '';
+        const quizBlock = !isLocked && !lessonHasSteps && lessonHasQuiz && progress.enrolled && !isCompleted ? `
           <div class="lesson-quiz-block" data-lesson-id="${escapeHtml(lesson.id)}" style="display:none;">
             <div class="quiz-questions">
               ${(lesson.quiz || []).map((q, qi) => `
@@ -739,7 +852,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
         ` : '';
         const practicalMapNav = buildPracticalMap(progress);
-        const stepsHtmlNew = lessonHasSteps
+        const stepsHtmlNew = !isLocked && lessonHasSteps
           ? renderLessonSteps(
               lesson,
               i,
@@ -751,14 +864,15 @@ document.addEventListener('DOMContentLoaded', async () => {
               isAuthenticated
             )
           : '';
-        const navHtmlNew = renderLessonNavRow(courseId, lessonsListFull, lesson.id, lessonId, stepId);
+        const navHtmlNew = !isLocked ? renderLessonNavRow(courseId, lessonsListFull, lesson.id, lessonId, stepId) : '';
         return `
-          <li class="course-lesson-item" data-lesson-id="${escapeHtml(lesson.id)}">
+          <li class="course-lesson-item${isLocked ? ' course-lesson-item--locked' : ''}" data-lesson-id="${escapeHtml(lesson.id)}">
             <div class="course-lesson-header">
               <span class="stat-label">${escapeHtml(moduleTitle || `Модуль ${moduleIndex}`)}</span>
               <span class="stat-value">${escapeHtml(lesson.title)}</span>
-              ${!lessonHasSteps ? completeBtn : ''}
+              ${isLocked ? '<span class="tag">🔒 Закрыт</span>' : (!lessonHasSteps ? completeBtn : '')}
             </div>
+            ${lockedHintHtml}
             ${contentHtml}
             ${attHtml}
             ${quizBlock}
@@ -784,6 +898,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (contentEl) contentEl.innerHTML = contentHtmlNew;
       initStepsVisibility();
       attachContentListeners();
+      syncProgramSidebarHeight();
     }
 
     function refreshLessonNavs() {
@@ -985,6 +1100,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       const link = e.target.closest('a.course-nav-link');
       if (!link || !link.href || (link.getAttribute('href') || '').indexOf(courseId) === -1) return;
       if (!link.closest('.course-layout')) return;
+      if (link.dataset.locked === '1') {
+        e.preventDefault();
+        showToast(
+          progress.enrolled
+            ? 'Раздел откроется после прохождения предыдущих уроков.'
+            : 'Запишитесь на курс, чтобы открыть материалы.',
+          'error'
+        );
+        return;
+      }
       e.preventDefault();
       const url = new URL(link.href, window.location.href);
       const mid = url.searchParams.get('module') || '';
@@ -1012,13 +1137,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!item) return;
       const btn = item.querySelector('.lesson-complete, .lesson-quiz-trigger');
       const quizBlock = item.querySelector('.lesson-quiz-block');
-      if (btn) btn.replaceWith('<span class="tag tag-green">Пройден</span>');
+      if (btn) {
+        const tag = document.createElement('span');
+        tag.className = 'tag tag-green';
+        tag.textContent = 'Пройден';
+        btn.replaceWith(tag);
+      }
       if (quizBlock) quizBlock.style.display = 'none';
+
+      completedSet.add(lessonId);
+      progress.completedLessonIds = Array.from(completedSet);
+      allowedLessonIds = computeAllowedLessonIds();
+      applySequentialLocksToProgram();
+
       const fill = root.querySelector('.progress-bar-fill');
       const valueEl = root.querySelector('.stat-value');
       if (fill && valueEl && totalLessons > 0) {
-        const list = root.querySelector('.course-lessons-list');
-        const nowCompleted = list ? list.querySelectorAll('.tag-green').length : 0;
+        const nowCompleted = completedSet.size;
         const newPercent = Math.round((nowCompleted / totalLessons) * 100);
         fill.style.transform = `scaleX(${newPercent / 100})`;
         valueEl.textContent = `${newPercent}%`;

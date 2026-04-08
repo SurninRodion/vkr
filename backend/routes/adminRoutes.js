@@ -19,12 +19,17 @@ const {
   updateCourse,
   deleteCourse,
   uploadAttachment,
+  uploadLessonVideo,
   deleteAttachment,
+  getCourseCertificateTemplate,
+  updateCourseCertificateTemplate,
+  resetCourseCertificateTemplate,
+  reissueCourseCertificates,
   getUsers,
   updateUserRole,
   deleteUser
 } = require('../controllers/adminController');
-const { uploadSingle } = require('../middleware/uploadMiddleware');
+const { uploadSingle, uploadVideoSingle } = require('../middleware/uploadMiddleware');
 
 const router = express.Router();
 
@@ -55,12 +60,23 @@ router.get('/courses', getCourses);
 router.post('/courses', createCourse);
 router.put('/courses/:id', updateCourse);
 router.delete('/courses/:id', deleteCourse);
+router.get('/courses/:id/certificate-template', getCourseCertificateTemplate);
+router.put('/courses/:id/certificate-template', updateCourseCertificateTemplate);
+router.post('/courses/:id/certificate-template/reset', resetCourseCertificateTemplate);
+router.post('/courses/:id/certificates/reissue', reissueCourseCertificates);
 router.post('/lessons/:lessonId/attachments', (req, res, next) => {
   uploadSingle(req.params.lessonId)(req, res, (err) => {
     if (err) return res.status(400).json({ message: err.message || 'Ошибка загрузки файла' });
     next();
   });
 }, uploadAttachment);
+
+router.post('/lessons/:lessonId/videos', (req, res, next) => {
+  uploadVideoSingle(req.params.lessonId)(req, res, (err) => {
+    if (err) return res.status(400).json({ message: err.message || 'Ошибка загрузки видео' });
+    next();
+  });
+}, uploadLessonVideo);
 router.delete('/attachments/:id', deleteAttachment);
 
 // Пользователи

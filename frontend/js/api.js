@@ -277,6 +277,76 @@ export async function apiGetMyCourses() {
   return request('/profile/courses', { method: 'GET', withAuth: true });
 }
 
+export async function apiGetMyCertificates() {
+  return request('/profile/certificates', { method: 'GET', withAuth: true });
+}
+
+export async function apiGetMyCertificateHtml(id) {
+  const token = (() => {
+    try {
+      const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed?.token || null;
+    } catch {
+      return null;
+    }
+  })();
+
+  const headers = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(`${API_BASE}/profile/certificates/${encodeURIComponent(id)}/html`, {
+    method: 'GET',
+    headers,
+  });
+  if (!res.ok) {
+    let message = 'Ошибка загрузки сертификата';
+    try {
+      const data = await res.json();
+      message = data.message || message;
+    } catch {
+      // ignore
+    }
+    throw new ApiError(message, { status: res.status });
+  }
+  return res.text();
+}
+
+export async function apiDownloadMyCertificatePdf(id) {
+  const token = (() => {
+    try {
+      const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed?.token || null;
+    } catch {
+      return null;
+    }
+  })();
+
+  const headers = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(`${API_BASE}/profile/certificates/${encodeURIComponent(id)}/pdf`, {
+    method: 'GET',
+    headers,
+  });
+  if (!res.ok) {
+    let message = 'Ошибка загрузки PDF';
+    try {
+      const data = await res.json();
+      message = data.message || message;
+    } catch {
+      // ignore
+    }
+    throw new ApiError(message, { status: res.status });
+  }
+  const blob = await res.blob();
+  const disposition = res.headers.get('Content-Disposition') || '';
+  const match = disposition.match(/filename="([^"]+)"/i);
+  const filename = match ? match[1] : `certificate-${id}.pdf`;
+  return { blob, filename };
+}
+
 export async function apiGetCourseProgress(courseId) {
   return request(`/courses/${encodeURIComponent(courseId)}/progress`, {
     method: 'GET',

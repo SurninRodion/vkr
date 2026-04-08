@@ -14,6 +14,39 @@ function getAdminHeaders() {
   return headers;
 }
 
+function getAdminAuthHeaders() {
+  const headers = {};
+  try {
+    const raw = localStorage.getItem('promptlearn_auth');
+    if (!raw) return headers;
+    const parsed = JSON.parse(raw);
+    if (parsed?.token) headers.Authorization = `Bearer ${parsed.token}`;
+  } catch (_) {}
+  return headers;
+}
+
+function getCurrentLessonFromPending() {
+  const pending = state.pendingStep;
+  if (!pending) return null;
+  const modules = getModulesFromState();
+  return modules[pending.modIndex]?.lessons?.[pending.lessonIndex] || null;
+}
+
+async function uploadVideoForLesson(lessonId, file) {
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await fetch(`${ADMIN_API_BASE}/lessons/${encodeURIComponent(lessonId)}/videos`, {
+    method: 'POST',
+    headers: getAdminAuthHeaders(),
+    body: fd,
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message || 'Ошибка загрузки видео');
+  }
+  return res.json();
+}
+
 async function ensureAdminAccess() {
   try {
     const profile = await apiGetProfile();
@@ -50,8 +83,174 @@ let state = {
   /** Индекс модуля для модалки «Название модуля». */
   pendingModuleIndex: null,
   /** { mode: 'add'|'edit', modIndex: number, lessonIndex?: number } */
-  lessonModal: null
+  lessonModal: null,
+  certificateTemplate: null,
+  certificateDraft: null,
 };
+
+function getDefaultCertificateTemplateForDraft(courseTitle) {
+  // Должно соответствовать дефолту на бэкенде (примерно), чтобы черновик не был пустым.
+  return {
+    enabled: true,
+    title: `Сертификат: ${courseTitle || 'Курс'}`,
+    templateHtml: `
+      <div class="page">
+        <div class="bg"></div>
+        <div class="paper">
+          <div class="content">
+            <div class="top">
+              <div class="brand">Prompt <span class="a">Academy</span> <span class="b">Certificate</span></div>
+              <div class="meta">
+                <div>Серийный №: <strong>{{serial}}</strong></div>
+                <div>Дата выдачи: <strong>{{issued_date}}</strong></div>
+              </div>
+            </div>
+
+            <div class="hero">
+              <h1 class="title">Сертификат</h1>
+              <p class="subtitle">Подтверждает успешное прохождение курса</p>
+            </div>
+
+            <div class="name">{{user_name}}</div>
+            <div class="course">«{{course_title}}»</div>
+            <div class="line"></div>
+
+            <div class="footer">
+              <div class="sig">
+                <strong>Prompt Academy</strong>
+                Обучающая платформа по промпт-инжинирингу
+              </div>
+              <div class="stamp" aria-label="Печать сервиса">
+                <svg viewBox="0 0 200 200" aria-hidden="true">
+                  <defs>
+                    <path id="ringTop" d="M 100,18 A 82,82 0 0 1 182,100" />
+                    <path id="ringBottom" d="M 182,100 A 82,82 0 0 1 100,182 A 82,82 0 0 1 18,100" />
+                  </defs>
+
+                  <circle cx="100" cy="100" r="92" class="stroke" fill="none" stroke-width="6" />
+                  <circle cx="100" cy="100" r="78" class="stroke2" fill="none" stroke-width="3" />
+                  <circle cx="100" cy="100" r="62" class="stroke2 fillSoft" stroke-width="2" />
+
+                  <text font-size="10" class="textRing">
+                    <textPath href="#ringTop" startOffset="2%">PROMPT ACADEMY</textPath>
+                  </text>
+                  <text font-size="10" class="textRing">
+                    <textPath href="#ringBottom" startOffset="8%">CERTIFIED • COURSE COMPLETION</textPath>
+                  </text>
+
+                  <circle cx="100" cy="100" r="42" class="stroke2" fill="none" stroke-width="2" />
+                  <text x="100" y="92" text-anchor="middle" font-size="12" class="textCenter">CERTIFICATE</text>
+                  <text x="100" y="112" text-anchor="middle" font-size="10" class="muted">PROMPT ACADEMY</text>
+                  <text x="100" y="134" text-anchor="middle" font-size="16" class="stroke" fill="none" stroke-width="0">
+                    ★ ★ ★
+                  </text>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `.trim(),
+    templateCss: `
+      @page { size: A4 landscape; margin: 0; }
+      :root { --ink:#0b1220; --muted:#334155; --accent:#1d4ed8; --accent2:#7c3aed; --paper:#ffffff; --stamp:#0f3b8f; }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body { margin:0; background: #fff; font-family: Inter, Arial, sans-serif; color: var(--ink); }
+
+      .page {
+        width: 297mm;
+        height: 210mm;
+        margin: 0;
+        background: var(--paper);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .bg {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(1200px 520px at 10% 0%, rgba(29,78,216,.12), transparent 60%),
+          radial-gradient(900px 520px at 92% 8%, rgba(124,58,237,.10), transparent 60%),
+          radial-gradient(900px 520px at 84% 96%, rgba(29,78,216,.06), transparent 55%);
+        pointer-events: none;
+      }
+
+      .paper { position: absolute; inset: 0; }
+
+      .content {
+        position: relative;
+        height: 100%;
+        padding: 18mm 20mm;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .top {
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap: 18mm;
+      }
+
+      .brand {
+        font-weight: 800;
+        letter-spacing: .4px;
+        font-size: 18px;
+      }
+      .brand .a { color: var(--accent); }
+      .brand .b { color: var(--accent2); }
+
+      .meta {
+        text-align:right;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+      }
+      .meta strong { color: var(--ink); font-weight: 700; }
+
+      .hero { margin-top: 14mm; }
+      .title { font-size: 44px; font-weight: 800; letter-spacing: .2px; margin: 0; }
+      .subtitle { margin: 4mm 0 0; font-size: 16px; color: var(--muted); }
+
+      .name { margin-top: 14mm; font-size: 34px; font-weight: 800; letter-spacing: .2px; }
+      .course { margin-top: 3mm; font-size: 20px; color: var(--ink); }
+
+      .line {
+        margin-top: 8mm;
+        height: 1px;
+        background: linear-gradient(90deg, rgba(37,99,235,.0), rgba(37,99,235,.35), rgba(124,58,237,.25), rgba(124,58,237,0));
+      }
+
+      .footer {
+        margin-top: auto;
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-end;
+        gap: 12mm;
+        padding-top: 10mm;
+      }
+
+      .sig { font-size: 12px; color: var(--muted); }
+      .sig strong { display:block; color: var(--ink); font-size: 13px; margin-bottom: 3mm; }
+
+      .stamp { width: 42mm; height: 42mm; opacity: .92; }
+      .stamp svg { width: 100%; height: 100%; display:block; }
+      .stamp .stroke { stroke: rgba(15,59,143,.72); }
+      .stamp .stroke2 { stroke: rgba(15,59,143,.35); }
+      .stamp .fillSoft { fill: rgba(15,59,143,.06); }
+      .stamp .textRing { fill: rgba(15,59,143,.86); font-weight: 700; letter-spacing: .22em; }
+      .stamp .textCenter { fill: rgba(15,59,143,.92); font-weight: 800; letter-spacing: .10em; }
+      .stamp .muted { fill: rgba(15,59,143,.70); font-weight: 700; letter-spacing: .18em; }
+
+      @media print {
+        body { background: #fff; }
+        .page { box-shadow: none; }
+      }
+    `.trim(),
+  };
+}
 
 async function loadCourses() {
   const res = await fetch(`${ADMIN_API_BASE}/courses`, { headers: getAdminHeaders() });
@@ -115,6 +314,7 @@ function renderTree() {
         </div>
         <div class="builder-course-actions">
           <button type="button" class="btn btn-ghost btn-sm" id="builder-edit-course">Редактировать курс</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="builder-edit-certificate">Сертификат</button>
           ${course.id ? `<button type="button" class="btn btn-ghost btn-sm btn-danger" id="builder-delete-course">Удалить курс</button>` : ''}
         </div>
       </div>
@@ -234,6 +434,7 @@ function attachTreeListeners() {
   if (!root) return;
 
   root.querySelector('#builder-edit-course')?.addEventListener('click', () => openEditCourseModal());
+  root.querySelector('#builder-edit-certificate')?.addEventListener('click', () => openCertificateModal());
   root.querySelector('#builder-delete-course')?.addEventListener('click', () => deleteCourseConfirm());
   root.querySelector('#builder-add-module')?.addEventListener('click', () => addModule());
   root.querySelector('#builder-save-course')?.addEventListener('click', () => saveCourse());
@@ -304,6 +505,201 @@ function attachTreeListeners() {
       moveStep(modIdx, lessonIdx, stepIdx, dir);
     });
   });
+}
+
+function getCertificateModalEls() {
+  return {
+    backdrop: document.getElementById('modal-edit-certificate'),
+    enabled: document.getElementById('builder-certificate-enabled'),
+    title: document.getElementById('builder-certificate-title'),
+    html: document.getElementById('builder-certificate-html'),
+    css: document.getElementById('builder-certificate-css'),
+    preview: document.getElementById('builder-certificate-preview'),
+    applyBtn: document.getElementById('builder-certificate-apply'),
+    resetBtn: document.getElementById('builder-certificate-reset'),
+    reissueBtn: document.getElementById('builder-certificate-reissue'),
+  };
+}
+
+async function fetchCertificateTemplate(courseId) {
+  const res = await fetch(`${ADMIN_API_BASE}/courses/${encodeURIComponent(courseId)}/certificate-template`, {
+    method: 'GET',
+    headers: getAdminHeaders(),
+  });
+  if (!res.ok) throw new Error('Ошибка загрузки шаблона сертификата');
+  return res.json();
+}
+
+async function saveCertificateTemplate(courseId, payload) {
+  const res = await fetch(`${ADMIN_API_BASE}/courses/${encodeURIComponent(courseId)}/certificate-template`, {
+    method: 'PUT',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message || 'Ошибка сохранения шаблона сертификата');
+  }
+  return true;
+}
+
+async function resetCertificateTemplate(courseId) {
+  const res = await fetch(`${ADMIN_API_BASE}/courses/${encodeURIComponent(courseId)}/certificate-template/reset`, {
+    method: 'POST',
+    headers: getAdminHeaders(),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message || 'Ошибка сброса шаблона сертификата');
+  }
+  return true;
+}
+
+async function reissueCertificatesForCourse(courseId) {
+  const res = await fetch(`${ADMIN_API_BASE}/courses/${encodeURIComponent(courseId)}/certificates/reissue`, {
+    method: 'POST',
+    headers: getAdminHeaders(),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message || 'Ошибка перевыпуска сертификатов');
+  }
+  return res.json().catch(() => ({}));
+}
+
+function buildCertificatePreviewDoc({ templateHtml, templateCss }, { userName, courseTitle, issuedDate, serial }) {
+  const esc = (s) =>
+    String(s ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  const safe = {
+    user_name: esc(userName),
+    course_title: esc(courseTitle),
+    issued_date: esc(issuedDate),
+    serial: esc(serial),
+  };
+  const body = String(templateHtml || '')
+    .replace(/\{\{\s*user_name\s*\}\}/g, safe.user_name)
+    .replace(/\{\{\s*course_title\s*\}\}/g, safe.course_title)
+    .replace(/\{\{\s*issued_date\s*\}\}/g, safe.issued_date)
+    .replace(/\{\{\s*serial\s*\}\}/g, safe.serial);
+  return `<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>${String(templateCss || '')}</style>
+</head>
+<body>${body}</body>
+</html>`;
+}
+
+function openCertificateModal() {
+  const course = state.currentCourse;
+  const els = getCertificateModalEls();
+  if (!els.backdrop || !els.enabled || !els.title || !els.html || !els.css || !els.preview) return;
+
+  const show = async () => {
+    els.backdrop.classList.add('backdrop--visible');
+    els.backdrop.setAttribute('aria-hidden', 'false');
+  };
+
+  const fill = (tpl) => {
+    const t = tpl || state.certificateDraft || state.certificateTemplate || {};
+    els.enabled.checked = Boolean(t.enabled);
+    els.title.value = t.title || '';
+    els.html.value = t.templateHtml || '';
+    els.css.value = t.templateCss || '';
+    updateCertificatePreview();
+  };
+
+  const load = async () => {
+    if (!course?.id) {
+      showToast('Сначала сохраните курс, чтобы привязать шаблон сертификата.', 'error');
+      state.certificateDraft =
+        state.certificateDraft || getDefaultCertificateTemplateForDraft(course?.title || '');
+      fill(state.certificateDraft);
+      await show();
+      return;
+    }
+    try {
+      const tpl = await fetchCertificateTemplate(course.id);
+      state.certificateTemplate = tpl;
+      state.certificateDraft = null;
+      fill(tpl);
+      await show();
+
+      if (els.resetBtn && !els.resetBtn.dataset.bound) {
+        els.resetBtn.dataset.bound = '1';
+        els.resetBtn.addEventListener('click', async () => {
+          if (!confirm('Сбросить шаблон сертификата на значения по умолчанию?')) return;
+          try {
+            await resetCertificateTemplate(course.id);
+            const fresh = await fetchCertificateTemplate(course.id);
+            state.certificateTemplate = fresh;
+            fill(fresh);
+            showToast('Шаблон сброшен.', 'success');
+          } catch (e) {
+            showToast(e.message || 'Не удалось сбросить шаблон.', 'error');
+          }
+        });
+      }
+
+      if (els.reissueBtn && !els.reissueBtn.dataset.bound) {
+        els.reissueBtn.dataset.bound = '1';
+        els.reissueBtn.addEventListener('click', async () => {
+          if (!confirm('Перевыпустить все уже выданные сертификаты этого курса (обновить дизайн)?')) return;
+          try {
+            const result = await reissueCertificatesForCourse(course.id);
+            showToast(`Готово: обновлено ${result.updated ?? 0}, ошибок ${result.failed ?? 0}.`, 'success');
+          } catch (e) {
+            showToast(e.message || 'Не удалось перевыпустить сертификаты.', 'error');
+          }
+        });
+      }
+    } catch (e) {
+      showToast(e.message || 'Не удалось загрузить шаблон.', 'error');
+    }
+  };
+  load();
+}
+
+function closeCertificateModal() {
+  const els = getCertificateModalEls();
+  if (!els.backdrop) return;
+  els.backdrop.classList.remove('backdrop--visible');
+  els.backdrop.setAttribute('aria-hidden', 'true');
+}
+
+function collectCertificateModal() {
+  const els = getCertificateModalEls();
+  if (!els.enabled || !els.title || !els.html || !els.css) return null;
+  return {
+    enabled: els.enabled.checked,
+    title: els.title.value.trim(),
+    templateHtml: els.html.value,
+    templateCss: els.css.value,
+  };
+}
+
+function updateCertificatePreview() {
+  const els = getCertificateModalEls();
+  const draft = collectCertificateModal();
+  if (!els.preview || !draft) return;
+  const courseTitle = state.currentCourse?.title || 'Курс';
+  const doc = buildCertificatePreviewDoc(draft, {
+    userName: 'Иван Иванов',
+    courseTitle,
+    issuedDate: new Date().toLocaleDateString('ru-RU'),
+    serial: 'DEMO-12345',
+  });
+  els.preview.srcdoc = doc;
 }
 
 function getModulesFromState() {
@@ -562,14 +958,82 @@ function openStepFormForType(stepType, payload) {
           <input type="text" class="form-input" id="step-video-title" value="${escapeHtml(payload.title || '')}" />
         </div>
         <div class="form-field">
+          <label class="form-label">Видеофайл (загрузка на сервер)</label>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <input type="file" class="form-input" id="step-video-file" accept="video/*" />
+            <button type="button" class="btn btn-outline btn-sm" id="step-video-upload-btn">Загрузить</button>
+            <span class="muted" id="step-video-upload-status" style="font-size:12px;"></span>
+          </div>
+          <div class="muted" style="font-size:12px;margin-top:6px;">
+            Подсказка: чтобы загрузка работала, урок должен быть уже сохранён (у него должен быть id).
+          </div>
+        </div>
+        <div class="form-field">
           <label class="form-label">URL видео</label>
           <input type="url" class="form-input" id="step-video-url" value="${escapeHtml(payload.url || '')}" placeholder="https://..." />
+        </div>
+        <div class="form-field" id="step-video-preview-wrap" style="display:none;">
+          <label class="form-label">Предпросмотр</label>
+          <video id="step-video-preview" controls preload="metadata" style="width:100%;max-height:360px;border-radius:12px;background:#000;"></video>
         </div>
         <div class="form-field">
           <label class="form-label">Описание</label>
           <textarea class="textarea" id="step-video-desc" rows="3">${escapeHtml(payload.description || '')}</textarea>
         </div>
       `;
+      (function bindVideoUploadUi() {
+        const urlInput = bodyEl.querySelector('#step-video-url');
+        const previewWrap = bodyEl.querySelector('#step-video-preview-wrap');
+        const preview = bodyEl.querySelector('#step-video-preview');
+        const fileInput = bodyEl.querySelector('#step-video-file');
+        const btn = bodyEl.querySelector('#step-video-upload-btn');
+        const status = bodyEl.querySelector('#step-video-upload-status');
+
+        const updatePreview = () => {
+          const url = (urlInput?.value || '').trim();
+          const isFileVideo =
+            /^\/uploads\//i.test(url) ||
+            /\.(mp4|webm|ogg|mov|m4v)(\?|#|$)/i.test(url);
+          if (url && isFileVideo) {
+            previewWrap.style.display = 'block';
+            preview.src = url;
+          } else {
+            previewWrap.style.display = 'none';
+            preview.removeAttribute('src');
+            preview.load?.();
+          }
+        };
+
+        urlInput?.addEventListener('input', updatePreview);
+        updatePreview();
+
+        btn?.addEventListener('click', async () => {
+          const file = fileInput?.files?.[0];
+          if (!file) {
+            showToast('Выберите видеофайл для загрузки.', 'error');
+            return;
+          }
+          const lesson = getCurrentLessonFromPending();
+          if (!lesson?.id) {
+            showToast('Сначала сохраните курс (чтобы у урока появился id), затем загрузите видео.', 'error');
+            return;
+          }
+          btn.disabled = true;
+          if (status) status.textContent = 'Загрузка…';
+          try {
+            const data = await uploadVideoForLesson(lesson.id, file);
+            if (urlInput) urlInput.value = data.url || '';
+            if (status) status.textContent = 'Готово';
+            showToast('Видео загружено.', 'success');
+            updatePreview();
+          } catch (e) {
+            if (status) status.textContent = '';
+            showToast(e.message || 'Не удалось загрузить видео.', 'error');
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      })();
       break;
     case 'test':
       const options = payload.options || ['', ''];
@@ -771,6 +1235,24 @@ async function saveCourse() {
     showToast('Курс сохранён.', 'success');
     state.currentCourse = { ...data, id: newId };
     if (newId) setCourseIdInUrl(newId);
+
+    // Если шаблон сертификата редактировали до сохранения курса — сохраним его сейчас
+    if (
+      newId &&
+      state.certificateDraft &&
+      (String(state.certificateDraft.templateHtml || '').trim() ||
+        String(state.certificateDraft.templateCss || '').trim())
+    ) {
+      try {
+        await saveCertificateTemplate(newId, state.certificateDraft);
+        state.certificateDraft = null;
+        state.certificateTemplate = await fetchCertificateTemplate(newId).catch(() => null);
+        showToast('Шаблон сертификата сохранён.', 'success');
+      } catch (e) {
+        showToast(e.message || 'Не удалось сохранить шаблон сертификата.', 'error');
+      }
+    }
+
     state.courses = await loadCourses();
     renderCourseSelect(state.courses, newId);
     renderTree();
@@ -780,6 +1262,45 @@ async function saveCourse() {
     if (btn) btn.disabled = false;
   }
 }
+
+const modalCertificate = document.getElementById('modal-edit-certificate');
+modalCertificate?.addEventListener('click', (e) => {
+  if (e.target === modalCertificate || e.target.closest('[data-modal-certificate-close]')) {
+    closeCertificateModal();
+  }
+});
+// Живой предпросмотр, чтобы не перегружать интерфейс кнопками
+['builder-certificate-enabled', 'builder-certificate-title', 'builder-certificate-html', 'builder-certificate-css'].forEach((id) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', () => {
+    clearTimeout(window.__certPreviewT);
+    window.__certPreviewT = setTimeout(updateCertificatePreview, 250);
+  });
+  el.addEventListener('change', () => {
+    clearTimeout(window.__certPreviewT);
+    window.__certPreviewT = setTimeout(updateCertificatePreview, 250);
+  });
+});
+document.getElementById('builder-certificate-apply')?.addEventListener('click', async () => {
+  const courseId = state.currentCourse?.id;
+  const draft = collectCertificateModal();
+  if (!draft) return;
+  if (!courseId) {
+    state.certificateDraft = draft;
+    showToast('Сохраните курс — и шаблон применится.', 'success');
+    closeCertificateModal();
+    return;
+  }
+  try {
+    await saveCertificateTemplate(courseId, draft);
+    state.certificateTemplate = await fetchCertificateTemplate(courseId).catch(() => null);
+    showToast('Шаблон сертификата сохранён.', 'success');
+    closeCertificateModal();
+  } catch (e) {
+    showToast(e.message || 'Не удалось сохранить шаблон сертификата.', 'error');
+  }
+});
 
 const modalEditCourse = document.getElementById('modal-edit-course');
 modalEditCourse?.addEventListener('click', (e) => {

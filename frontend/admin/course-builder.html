@@ -193,6 +193,51 @@
       </div>
     </div>
 
+    <!-- Модальное окно: сертификат курса -->
+    <div class="backdrop" id="modal-edit-certificate" aria-hidden="true">
+      <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="modal-edit-certificate-heading">
+        <h3 class="modal-title" id="modal-edit-certificate-heading">Сертификат курса</h3>
+        <div class="modal-body">
+          <div class="form-field" style="display:flex;align-items:center;gap:10px;">
+            <input type="checkbox" id="builder-certificate-enabled" />
+            <label class="form-label" for="builder-certificate-enabled" style="margin:0;">Выдавать сертификат по завершении курса</label>
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="builder-certificate-title">Заголовок (для админки)</label>
+            <input type="text" id="builder-certificate-title" class="form-input" autocomplete="off" />
+          </div>
+          <details class="form-field" id="builder-certificate-advanced" style="margin-top: 6px;">
+            <summary class="btn btn-outline btn-sm" style="list-style:none; display:inline-flex; cursor:pointer;">
+              Редактировать шаблон (дополнительно)
+            </summary>
+            <div style="margin-top:12px;">
+              <div class="form-field">
+                <label class="form-label" for="builder-certificate-html">HTML шаблона</label>
+                <textarea id="builder-certificate-html" class="textarea" rows="7" spellcheck="false"></textarea>
+                <div class="muted" style="margin-top:6px;font-size:12px;">
+                  Плейсхолдеры: <code>{{user_name}}</code>, <code>{{course_title}}</code>, <code>{{issued_date}}</code>, <code>{{serial}}</code>
+                </div>
+              </div>
+              <div class="form-field">
+                <label class="form-label" for="builder-certificate-css">CSS шаблона</label>
+                <textarea id="builder-certificate-css" class="textarea" rows="7" spellcheck="false"></textarea>
+              </div>
+            </div>
+          </details>
+          <div class="form-field">
+            <label class="form-label">Предпросмотр</label>
+            <iframe id="builder-certificate-preview" title="Предпросмотр сертификата" style="width:100%;height:340px;border:1px solid var(--color-border,#e2e8f0);border-radius:12px;background:#fff;"></iframe>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" data-modal-certificate-close>Отмена</button>
+          <button type="button" class="btn btn-outline" id="builder-certificate-reset">Сбросить шаблон</button>
+          <button type="button" class="btn btn-outline" id="builder-certificate-reissue">Перевыпустить сертификаты</button>
+          <button type="button" class="btn btn-primary" id="builder-certificate-apply">Сохранить</button>
+        </div>
+      </div>
+    </div>
+
     <div class="toast-container" id="toast-container"></div>
 
     <script type="module" src="../js/app.js"></script>

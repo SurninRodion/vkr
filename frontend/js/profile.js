@@ -2,6 +2,9 @@ import {
   apiGetProfile,
   apiUpdateProfile,
   apiGetMyCourses,
+  apiGetMyCertificates,
+  apiGetMyCertificateHtml,
+  apiDownloadMyCertificatePdf,
   apiResendVerification,
   apiVerifyEmail,
   rateLimitEmailMessage,
@@ -173,6 +176,36 @@ function renderProfile(root, profile, myCourses = []) {
     </div>
   `;
 
+  const certificates = profile.certificates || [];
+  const certsHtml =
+    certificates.length > 0
+      ? `
+    <div class="profile-my-courses" style="margin-top: 18px;">
+      <h2 class="section-title">Мои сертификаты</h2>
+      <div class="my-courses-list">
+        ${certificates
+          .map(
+            (c) => `
+          <button type="button" class="my-course-card my-course-card--button" data-cert-open="${escapeHtml(c.id)}">
+            <div class="my-course-card-title">${escapeHtml(c.courseTitle || 'Курс')}</div>
+            <div class="my-course-card-meta">
+              <span class="my-course-progress">Серийный №: ${escapeHtml(c.serial || '')}</span>
+              <span class="my-course-lessons">Выдан: ${escapeHtml(c.issuedAt ? new Date(c.issuedAt).toLocaleDateString('ru-RU') : '')}</span>
+            </div>
+          </button>
+        `
+          )
+          .join('')}
+      </div>
+    </div>
+  `
+      : `
+    <div class="profile-my-courses" style="margin-top: 18px;">
+      <h2 class="section-title">Мои сертификаты</h2>
+      <p class="muted">Пока нет сертификатов — пройдите курс до конца, и сертификат появится здесь.</p>
+    </div>
+  `;
+
   root.innerHTML = `
     <div class="profile-main">
       <div class="profile-header">
@@ -204,6 +237,7 @@ function renderProfile(root, profile, myCourses = []) {
         <span class="stat-value">${profile.points}</span>
       </div>
       ${myCoursesHtml}
+      ${certsHtml}
     </div>
     <aside class="profile-side">
       <div class="profile-level-card" aria-label="Уровень на платформе">
@@ -266,6 +300,16 @@ function renderProfile(root, profile, myCourses = []) {
   const saveBtn = root.querySelector('#profile-save-btn');
   const resendBtn = root.querySelector('#resend-verification-btn');
 
+  // Сертификаты: модалка просмотра
+  ensureCertificateModal();
+  root.querySelectorAll('[data-cert-open]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-cert-open');
+      if (!id) return;
+      openCertificateModal(id);
+    });
+  });
+
   if (form && saveBtn) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -306,6 +350,154 @@ function renderProfile(root, profile, myCourses = []) {
         resendBtn.classList.remove('disabled');
       }
     });
+  }
+}
+
+function injectViewerScale(htmlString) {
+  const html = String(htmlString || '');
+  if (!html) return html;
+  const injectedStyle = `
+    <style>
+      html, body { margin: 0; padding: 0; overflow: hidden; }
+      body { display:flex; align-items:center; justify-content:center; background:#ffffff; }
+      .page { transform-origin: top left; box-shadow: 0 20px 70px rgba(15, 23, 42, 0.18); }
+    </style>
+  `.trim();
+  const injectedScript = `
+    <script>
+      (function () {
+        function fit() {
+          var page = document.querySelector('.page');
+          if (!page) return;
+          page.style.transform = '';
+          var pr = page.getBoundingClientRect();
+          var vw = window.innerWidth;
+          var vh = window.innerHeight;
+          if (!pr.width || !pr.height) return;
+          var s = Math.min(vw / pr.width, vh / pr.height);
+          if (!isFinite(s) || s <= 0) s = 1;
+          page.style.transform = 'scale(' + s.toFixed(4) + ')';
+        }
+        window.addEventListener('resize', fit);
+        if (document.fonts && document.fonts.ready) {
+          document.fonts.ready.then(fit).catch(fit);
+        }
+        setTimeout(fit, 0);
+      })();
+    </script>
+  `.trim();
+  if (html.includes('</head>')) {
+    return html.replace('</head>', injectedStyle + '\n</head>').replace('</body>', injectedScript + '\n</body>');
+  }
+  return html + '\n' + injectedStyle + '\n' + injectedScript;
+}
+
+function ensureCertificateModal() {
+  let modal = document.getElementById('certificate-modal');
+  if (modal) return modal;
+  modal = document.createElement('div');
+  modal.className = 'backdrop';
+  modal.id = 'certificate-modal';
+  modal.setAttribute('aria-hidden', 'true');
+  modal.innerHTML = `
+    <div class="modal modal--certificate" role="dialog" aria-modal="true" aria-labelledby="certificate-modal-title">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+        <h3 class="modal-title" id="certificate-modal-title">Сертификат</h3>
+        <div style="display:flex; gap: 8px; align-items:center;">
+          <button type="button" class="btn btn-primary btn-sm" id="certificate-modal-download" disabled>Скачать PDF</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-cert-close>Закрыть</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <iframe id="certificate-modal-frame" title="Сертификат" style="width:100%;flex:1;border:0;border-radius:12px;background:#ffffff;"></iframe>
+        <p class="muted" id="certificate-modal-status" style="margin:10px 4px 0;">Загрузка…</p>
+      </div>
+    </div>
+  `;
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal || e.target.closest('[data-cert-close]')) {
+      modal.classList.remove('backdrop--visible');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+  });
+  document.body.appendChild(modal);
+  return modal;
+}
+
+function buildPdfSourceFromCertificateHtml(htmlString) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(String(htmlString || ''), 'text/html');
+  const title = doc.title || 'certificate';
+  const styleText = Array.from(doc.querySelectorAll('style'))
+    .map((s) => s.textContent || '')
+    .join('\n');
+  const bodyHtml = doc.body ? doc.body.innerHTML : '';
+
+  const host = document.createElement('div');
+  host.id = 'cert-pdf-host-profile';
+  host.style.position = 'fixed';
+  host.style.left = '0';
+  host.style.top = '0';
+  host.style.width = '297mm';
+  host.style.height = '210mm';
+  host.style.background = '#ffffff';
+  host.style.overflow = 'hidden';
+  host.style.opacity = '0';
+  host.style.pointerEvents = 'none';
+  host.style.zIndex = '9999';
+
+  const style = document.createElement('style');
+  style.textContent = styleText || '';
+  const content = document.createElement('div');
+  content.innerHTML = bodyHtml;
+
+  host.appendChild(style);
+  host.appendChild(content);
+  return { host, title };
+}
+
+async function openCertificateModal(certId) {
+  const modal = ensureCertificateModal();
+  const frame = modal.querySelector('#certificate-modal-frame');
+  const status = modal.querySelector('#certificate-modal-status');
+  const btnDownload = modal.querySelector('#certificate-modal-download');
+  if (!frame || !status) return;
+  status.style.display = '';
+  status.textContent = 'Загрузка…';
+  frame.srcdoc = '';
+  if (btnDownload) btnDownload.disabled = true;
+  modal.classList.add('backdrop--visible');
+  modal.setAttribute('aria-hidden', 'false');
+  try {
+    const html = await apiGetMyCertificateHtml(certId);
+    frame.srcdoc = injectViewerScale(html);
+    status.style.display = 'none';
+
+    if (btnDownload) {
+      btnDownload.disabled = false;
+      btnDownload.onclick = async () => {
+        try {
+          btnDownload.disabled = true;
+          btnDownload.textContent = 'Готовим PDF…';
+          const { blob, filename } = await apiDownloadMyCertificatePdf(certId);
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (e) {
+          showToast(e?.message || 'Не удалось скачать PDF.', 'error');
+        } finally {
+          btnDownload.disabled = false;
+          btnDownload.textContent = 'Скачать PDF';
+        }
+      };
+    }
+  } catch (e) {
+    status.textContent = e?.message || 'Не удалось загрузить сертификат.';
   }
 }
 
@@ -364,12 +556,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
-    const [profile, myCoursesRes] = await Promise.all([
+    const [profile, myCoursesRes, certsRes] = await Promise.all([
       apiGetProfile(),
       apiGetMyCourses(),
+      apiGetMyCertificates().catch(() => ({ certificates: [] })),
     ]);
     const myCourses = myCoursesRes.enrollments || [];
-    renderProfile(root, profile, myCourses);
+    renderProfile(root, { ...profile, certificates: certsRes.certificates || [] }, myCourses);
   } catch (e) {
     console.error(e);
     root.innerHTML =

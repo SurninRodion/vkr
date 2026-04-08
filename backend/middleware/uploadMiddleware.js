@@ -32,4 +32,17 @@ function uploadSingle(lessonId) {
   }).single('file');
 }
 
-module.exports = { uploadSingle, UPLOADS_BASE };
+function uploadVideoSingle(lessonId) {
+  return multer({
+    storage: getStorageForLesson(lessonId),
+    // Видео может быть заметно больше, чем вложения-документы
+    limits: { fileSize: 500 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+      const allowed = /\.(mp4|webm|ogg|mov|m4v)$/i.test(file.originalname);
+      if (allowed) cb(null, true);
+      else cb(new Error('Недопустимый тип видео. Разрешены: MP4, WEBM, OGG, MOV, M4V.'));
+    }
+  }).single('file');
+}
+
+module.exports = { uploadSingle, uploadVideoSingle, UPLOADS_BASE };

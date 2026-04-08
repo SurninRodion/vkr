@@ -5,6 +5,209 @@ const db = require('../db/db');
 const { analyzePrompt } = require('../utils/aiAnalyzer');
 const { UPLOADS_BASE } = require('../middleware/uploadMiddleware');
 
+function defaultCertificateTemplate(courseTitle) {
+  return {
+    enabled: 1,
+    title: `Сертификат: ${courseTitle || 'Курс'}`,
+    template_css: `
+      @page { size: A4 landscape; margin: 0; }
+      :root { --ink:#0b1220; --muted:#334155; --accent:#1d4ed8; --accent2:#7c3aed; --paper:#ffffff; --stamp:#0f3b8f; }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body { margin:0; background: #fff; font-family: Inter, Arial, sans-serif; color: var(--ink); }
+
+      .page {
+        width: 297mm;
+        height: 210mm;
+        margin: 0;
+        background: var(--paper);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .bg {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(1200px 520px at 10% 0%, rgba(29,78,216,.12), transparent 60%),
+          radial-gradient(900px 520px at 92% 8%, rgba(124,58,237,.10), transparent 60%),
+          radial-gradient(900px 520px at 84% 96%, rgba(29,78,216,.06), transparent 55%);
+        pointer-events: none;
+      }
+
+      /* Без “карточной” рамки и скруглений: лист выглядит корректно при печати */
+      .paper {
+        position: absolute;
+        inset: 0;
+      }
+
+      .content {
+        position: relative;
+        height: 100%;
+        padding: 18mm 20mm;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .top {
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap: 18mm;
+      }
+
+      .brand {
+        font-weight: 800;
+        letter-spacing: .4px;
+        font-size: 18px;
+      }
+      .brand .a { color: var(--accent); }
+      .brand .b { color: var(--accent2); }
+
+      .meta {
+        text-align:right;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+      }
+      .meta strong { color: var(--ink); font-weight: 700; }
+
+      .hero {
+        margin-top: 14mm;
+      }
+      .title {
+        font-size: 44px;
+        font-weight: 800;
+        letter-spacing: .2px;
+        margin: 0;
+      }
+      .subtitle {
+        margin: 4mm 0 0;
+        font-size: 16px;
+        color: var(--muted);
+      }
+
+      .name {
+        margin-top: 14mm;
+        font-size: 34px;
+        font-weight: 800;
+        letter-spacing: .2px;
+      }
+      .course {
+        margin-top: 3mm;
+        font-size: 20px;
+        color: var(--ink);
+      }
+
+      .line {
+        margin-top: 8mm;
+        height: 1px;
+        background: linear-gradient(90deg, rgba(37,99,235,.0), rgba(37,99,235,.35), rgba(124,58,237,.25), rgba(124,58,237,0));
+      }
+
+      .footer {
+        margin-top: auto;
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-end;
+        gap: 12mm;
+        padding-top: 10mm;
+      }
+
+      .sig {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .sig strong {
+        display:block;
+        color: var(--ink);
+        font-size: 13px;
+        margin-bottom: 3mm;
+      }
+
+      /* Печать сервиса (SVG, без наложений, как настоящая) */
+      .stamp {
+        width: 42mm;
+        height: 42mm;
+        opacity: .92;
+      }
+      .stamp svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      .stamp .stroke { stroke: rgba(15,59,143,.72); }
+      .stamp .stroke2 { stroke: rgba(15,59,143,.35); }
+      .stamp .fillSoft { fill: rgba(15,59,143,.06); }
+      .stamp .textRing { fill: rgba(15,59,143,.86); font-weight: 700; letter-spacing: .22em; }
+      .stamp .textCenter { fill: rgba(15,59,143,.92); font-weight: 800; letter-spacing: .10em; }
+      .stamp .muted { fill: rgba(15,59,143,.70); font-weight: 700; letter-spacing: .18em; }
+
+      @media print {
+        body { background: #fff; }
+      }
+    `.trim(),
+    template_html: `
+      <div class="page">
+        <div class="bg"></div>
+        <div class="paper">
+          <div class="content">
+            <div class="top">
+              <div class="brand">Prompt <span class="a">Academy</span> <span class="b">Certificate</span></div>
+              <div class="meta">
+                <div>Серийный №: <strong>{{serial}}</strong></div>
+                <div>Дата выдачи: <strong>{{issued_date}}</strong></div>
+              </div>
+            </div>
+
+            <div class="hero">
+              <h1 class="title">Сертификат</h1>
+              <p class="subtitle">Подтверждает успешное прохождение курса</p>
+            </div>
+
+            <div class="name">{{user_name}}</div>
+            <div class="course">«{{course_title}}»</div>
+            <div class="line"></div>
+
+            <div class="footer">
+              <div class="sig">
+                <strong>Prompt Academy</strong>
+                Обучающая платформа по промпт-инжинирингу
+              </div>
+              <div class="stamp" aria-label="Печать сервиса">
+                <svg viewBox="0 0 200 200" aria-hidden="true">
+                  <defs>
+                    <path id="ringTop" d="M 100,18 A 82,82 0 0 1 182,100" />
+                    <path id="ringBottom" d="M 182,100 A 82,82 0 0 1 100,182 A 82,82 0 0 1 18,100" />
+                  </defs>
+
+                  <circle cx="100" cy="100" r="92" class="stroke" fill="none" stroke-width="6" />
+                  <circle cx="100" cy="100" r="78" class="stroke2" fill="none" stroke-width="3" />
+                  <circle cx="100" cy="100" r="62" class="stroke2 fillSoft" stroke-width="2" />
+
+                  <text font-size="10" class="textRing">
+                    <textPath href="#ringTop" startOffset="2%">PROMPT ACADEMY</textPath>
+                  </text>
+                  <text font-size="10" class="textRing">
+                    <textPath href="#ringBottom" startOffset="8%">CERTIFIED • COURSE COMPLETION</textPath>
+                  </text>
+
+                  <circle cx="100" cy="100" r="42" class="stroke2" fill="none" stroke-width="2" />
+                  <text x="100" y="92" text-anchor="middle" font-size="12" class="textCenter">CERTIFICATE</text>
+                  <text x="100" y="112" text-anchor="middle" font-size="10" class="muted">PROMPT ACADEMY</text>
+                  <text x="100" y="134" text-anchor="middle" font-size="16" class="stroke" fill="none" stroke-width="0">
+                    ★ ★ ★
+                  </text>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `.trim(),
+  };
+}
+
 // ===== STATS =====
 
 async function getStats(req, res) {
@@ -619,6 +822,17 @@ async function createCourse(req, res) {
           return res.status(500).json({ message: 'Ошибка создания курса' });
         }
 
+        // Для каждого нового курса заранее сохраняем дефолтный шаблон сертификата,
+        // чтобы затем менялись только переменные (название курса/пользователь/дата/серийный номер).
+        try {
+          const def = defaultCertificateTemplate(title);
+          db.run(
+            `INSERT OR REPLACE INTO course_certificate_templates (course_id, enabled, title, template_html, template_css, updated_at)
+             VALUES (?, ?, ?, ?, ?, datetime('now'))`,
+            [id, def.enabled, def.title, def.template_html, def.template_css]
+          );
+        } catch (_) {}
+
         const useModules = Array.isArray(modulesPayload) && modulesPayload.length > 0;
         const lessonsToInsert = useModules
           ? modulesPayload.flatMap((mod, mi) => (mod.lessons || []).map((l, li) => ({ ...l, module_order: mi, order_index: l.order_index ?? li })))
@@ -771,6 +985,15 @@ async function updateCourse(req, res) {
                   } catch (_) {}
                 });
                 db.run('DELETE FROM course_lesson_attachments WHERE lesson_id = ?', [lessonId]);
+                db.all('SELECT id, file_path FROM course_lesson_videos WHERE lesson_id = ?', [lessonId], (e2, vids) => {
+                  (vids || []).forEach((v) => {
+                    try {
+                      const fullPath = path.join(__dirname, '..', v.file_path);
+                      if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
+                    } catch (_) {}
+                  });
+                  db.run('DELETE FROM course_lesson_videos WHERE lesson_id = ?', [lessonId]);
+                });
                 db.run('DELETE FROM course_quiz_questions WHERE lesson_id = ?', [lessonId]);
                 db.run('DELETE FROM course_lesson_progress WHERE lesson_id = ?', [lessonId]);
                 db.run('DELETE FROM course_lessons WHERE id = ?', [lessonId], () => done());
@@ -932,6 +1155,15 @@ async function updateCourse(req, res) {
                     } catch (_) {}
                   });
                   db.run('DELETE FROM course_lesson_attachments WHERE lesson_id = ?', [lessonId]);
+                  db.all('SELECT id, file_path FROM course_lesson_videos WHERE lesson_id = ?', [lessonId], (e2, vids) => {
+                    (vids || []).forEach((v) => {
+                      const fullPath = path.join(__dirname, '..', v.file_path);
+                      try {
+                        if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
+                      } catch (_) {}
+                    });
+                    db.run('DELETE FROM course_lesson_videos WHERE lesson_id = ?', [lessonId]);
+                  });
                   db.run('DELETE FROM course_quiz_questions WHERE lesson_id = ?', [lessonId], () =>
                     done()
                   );
@@ -1022,6 +1254,15 @@ async function deleteCourse(req, res) {
       lessonIds.forEach((lid) => {
         db.run('DELETE FROM course_lesson_steps WHERE lesson_id = ?', [lid]);
         db.run('DELETE FROM course_lesson_attachments WHERE lesson_id = ?', [lid]);
+        db.all('SELECT file_path FROM course_lesson_videos WHERE lesson_id = ?', [lid], (e, vids) => {
+          (vids || []).forEach((v) => {
+            try {
+              const fullPath = path.join(__dirname, '..', v.file_path);
+              if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
+            } catch (_) {}
+          });
+          db.run('DELETE FROM course_lesson_videos WHERE lesson_id = ?', [lid]);
+        });
         db.run('DELETE FROM course_quiz_questions WHERE lesson_id = ?', [lid]);
       });
       db.run('DELETE FROM course_modules WHERE course_id = ?', [id]);
@@ -1070,6 +1311,40 @@ async function uploadAttachment(req, res) {
   }
 }
 
+async function uploadLessonVideo(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Файл не загружен' });
+    }
+    const { lessonId } = req.params;
+    const backendRoot = path.join(__dirname, '..');
+    const relativePath = path.relative(backendRoot, req.file.path).replace(/\\/g, '/');
+    const videoId = uuidv4();
+    db.run(
+      `INSERT INTO course_lesson_videos (id, lesson_id, file_path, original_name, mime_type) VALUES (?, ?, ?, ?, ?)`,
+      [videoId, lessonId, relativePath, req.file.originalname || req.file.filename || 'video', req.file.mimetype || ''],
+      (err) => {
+        if (err) {
+          try {
+            fs.unlinkSync(req.file.path);
+          } catch (_) {}
+          return res.status(500).json({ message: 'Ошибка сохранения видео' });
+        }
+        const url = '/' + relativePath;
+        return res.status(201).json({
+          id: videoId,
+          url,
+          original_name: req.file.originalname || req.file.filename,
+          mime_type: req.file.mimetype || '',
+        });
+      }
+    );
+  } catch (err) {
+    console.error('[AdminController] uploadLessonVideo error:', err.message);
+    return res.status(500).json({ message: 'Ошибка загрузки видео' });
+  }
+}
+
 async function deleteAttachment(req, res) {
   try {
     const { id } = req.params;
@@ -1089,6 +1364,189 @@ async function deleteAttachment(req, res) {
     console.error('[AdminController] deleteAttachment error:', err.message);
     return res.status(500).json({ message: 'Ошибка удаления вложения' });
   }
+}
+
+// ===== COURSE CERTIFICATE TEMPLATES =====
+
+function getCourseCertificateTemplate(req, res) {
+  const { id: courseId } = req.params;
+  db.get('SELECT id, title FROM courses WHERE id = ?', [courseId], (errC, course) => {
+    if (errC) return res.status(500).json({ message: 'Ошибка сервера' });
+    if (!course) return res.status(404).json({ message: 'Курс не найден' });
+
+    db.get(
+      'SELECT course_id AS courseId, enabled, title, template_html AS templateHtml, template_css AS templateCss, updated_at AS updatedAt FROM course_certificate_templates WHERE course_id = ?',
+      [courseId],
+      (err, row) => {
+        if (err) return res.status(500).json({ message: 'Ошибка получения шаблона' });
+        if (row) return res.json(row);
+
+        const def = defaultCertificateTemplate(course.title);
+        db.run(
+          `INSERT OR REPLACE INTO course_certificate_templates (course_id, enabled, title, template_html, template_css, updated_at)
+           VALUES (?, ?, ?, ?, ?, datetime('now'))`,
+          [courseId, def.enabled, def.title, def.template_html, def.template_css],
+          (insErr) => {
+            if (insErr) return res.status(500).json({ message: 'Ошибка создания шаблона' });
+            return res.json({
+              courseId,
+              enabled: def.enabled,
+              title: def.title,
+              templateHtml: def.template_html,
+              templateCss: def.template_css,
+              updatedAt: new Date().toISOString(),
+            });
+          }
+        );
+      }
+    );
+  });
+}
+
+function updateCourseCertificateTemplate(req, res) {
+  const { id: courseId } = req.params;
+  const { enabled, title, templateHtml, templateCss } = req.body || {};
+  const enabledInt = enabled ? 1 : 0;
+  db.get('SELECT id FROM courses WHERE id = ?', [courseId], (errC, course) => {
+    if (errC) return res.status(500).json({ message: 'Ошибка сервера' });
+    if (!course) return res.status(404).json({ message: 'Курс не найден' });
+    db.run(
+      `INSERT OR REPLACE INTO course_certificate_templates (course_id, enabled, title, template_html, template_css, updated_at)
+       VALUES (?, ?, ?, ?, ?, datetime('now'))`,
+      [
+        courseId,
+        enabledInt,
+        String(title ?? '').trim(),
+        String(templateHtml ?? ''),
+        String(templateCss ?? ''),
+      ],
+      (err) => {
+        if (err) return res.status(500).json({ message: 'Ошибка сохранения шаблона' });
+        return res.status(200).json({ message: 'Шаблон сертификата сохранён' });
+      }
+    );
+  });
+}
+
+function resetCourseCertificateTemplate(req, res) {
+  const { id: courseId } = req.params;
+  db.get('SELECT id, title FROM courses WHERE id = ?', [courseId], (errC, course) => {
+    if (errC) return res.status(500).json({ message: 'Ошибка сервера' });
+    if (!course) return res.status(404).json({ message: 'Курс не найден' });
+    const def = defaultCertificateTemplate(course.title);
+    db.run(
+      `INSERT OR REPLACE INTO course_certificate_templates (course_id, enabled, title, template_html, template_css, updated_at)
+       VALUES (?, ?, ?, ?, ?, datetime('now'))`,
+      [courseId, def.enabled, def.title, def.template_html, def.template_css],
+      (err) => {
+        if (err) return res.status(500).json({ message: 'Ошибка сброса шаблона' });
+        return res.status(200).json({ message: 'Шаблон сброшен на значения по умолчанию' });
+      }
+    );
+  });
+}
+
+function escapeHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function renderCertificateHtml({ template_html, template_css }, meta) {
+  const safe = {
+    user_name: escapeHtml(meta.user_name),
+    course_title: escapeHtml(meta.course_title),
+    issued_date: escapeHtml(meta.issued_date),
+    serial: escapeHtml(meta.serial),
+  };
+  const htmlBody = String(template_html || '')
+    .replace(/\{\{\s*user_name\s*\}\}/g, safe.user_name)
+    .replace(/\{\{\s*course_title\s*\}\}/g, safe.course_title)
+    .replace(/\{\{\s*issued_date\s*\}\}/g, safe.issued_date)
+    .replace(/\{\{\s*serial\s*\}\}/g, safe.serial);
+
+  return `<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${safe.course_title} — сертификат</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+    <style>${String(template_css || '')}</style>
+  </head>
+  <body>
+    ${htmlBody}
+  </body>
+</html>`;
+}
+
+function reissueCourseCertificates(req, res) {
+  const { id: courseId } = req.params;
+
+  db.get('SELECT id, title FROM courses WHERE id = ?', [courseId], (errC, course) => {
+    if (errC) return res.status(500).json({ message: 'Ошибка сервера' });
+    if (!course) return res.status(404).json({ message: 'Курс не найден' });
+
+    db.get(
+      'SELECT enabled, title, template_html, template_css FROM course_certificate_templates WHERE course_id = ?',
+      [courseId],
+      (errT, tplRow) => {
+        if (errT) return res.status(500).json({ message: 'Ошибка загрузки шаблона' });
+        const tpl = tplRow || defaultCertificateTemplate(course.title);
+
+        db.all(
+          'SELECT id, user_id, serial, issued_at FROM course_certificates WHERE course_id = ? ORDER BY issued_at DESC',
+          [courseId],
+          (errList, certs) => {
+            if (errList) return res.status(500).json({ message: 'Ошибка загрузки сертификатов' });
+            const rows = certs || [];
+            if (!rows.length) return res.status(200).json({ message: 'Сертификатов для перевыпуска нет', updated: 0 });
+
+            let updated = 0;
+            let failed = 0;
+            let processed = 0;
+
+            rows.forEach((cc) => {
+              db.get('SELECT name FROM users WHERE id = ?', [cc.user_id], (errU, u) => {
+                const issued = cc.issued_at ? new Date(cc.issued_at) : new Date();
+                const issuedDate = Number.isNaN(issued.getTime())
+                  ? new Date().toLocaleDateString('ru-RU')
+                  : issued.toLocaleDateString('ru-RU');
+                const meta = {
+                  user_name: u?.name || 'Пользователь',
+                  course_title: course.title || 'Курс',
+                  issued_date: issuedDate,
+                  serial: cc.serial || '',
+                };
+                const rendered = renderCertificateHtml(tpl, meta);
+                db.run(
+                  'UPDATE course_certificates SET rendered_html = ?, meta_json = ? WHERE id = ?',
+                  [rendered, JSON.stringify(meta), cc.id],
+                  (errUp) => {
+                    if (errUp) failed += 1;
+                    else updated += 1;
+                    processed += 1;
+                    if (processed >= rows.length) {
+                      return res.status(200).json({
+                        message: 'Перевыпуск завершён',
+                        updated,
+                        failed,
+                      });
+                    }
+                  }
+                );
+              });
+            });
+          }
+        );
+      }
+    );
+  });
 }
 
 // ===== USERS =====
@@ -1155,7 +1613,12 @@ module.exports = {
   updateCourse,
   deleteCourse,
   uploadAttachment,
+  uploadLessonVideo,
   deleteAttachment,
+  getCourseCertificateTemplate,
+  updateCourseCertificateTemplate,
+  resetCourseCertificateTemplate,
+  reissueCourseCertificates,
   // Users
   getUsers,
   updateUserRole: updateUserRoleController,

@@ -12,6 +12,7 @@
 
 **Стек:**
 - **Backend:** Node.js, Express, SQLite3, JWT, bcrypt, uuid, nodemailer (SMTP-письма).
+- **PDF сертификатов:** Playwright (Chromium) — серверная генерация PDF 1:1 по HTML.
 - **Frontend:** статический HTML + CSS + vanilla JavaScript (ES modules), без фреймворков.
 - **База данных:** один файл SQLite (`database.db` по умолчанию).
 
@@ -107,7 +108,7 @@ vkr/
 │   │   ├── authMiddleware.js  # JWT → req.user
 │   │   ├── adminMiddleware.js # req.user.role === 'admin'
 │   │   ├── requireVerifiedEmail.js # блокирует действия до подтверждения email (403 + code EMAIL_NOT_VERIFIED)
-│   │   └── uploadMiddleware.js     # multer-конфигурация для загрузок (вложения к урокам)
+│   │   └── uploadMiddleware.js     # multer-конфигурация для загрузок (вложения и видео к урокам)
 │   ├── utils/
 │   │   ├── aiAnalyzer.js      # Анализ/генерация промпта: GigaChat или эвристики/внешний API
 │   │   └── mailer.js          # nodemailer transport + sendMail() (SMTP) + проверка конфигурации
@@ -377,6 +378,16 @@ vkr/
 - `mime_type` (TEXT, nullable)
 - `order_index` (INTEGER)
 
+#### `course_lesson_videos`
+Видеофайлы уроков (загрузки из конструктора для шагов типа `video`).
+
+- `id` (TEXT, PK)
+- `lesson_id` (TEXT, NOT NULL)
+- `file_path` (TEXT, NOT NULL): относительный путь в `backend/uploads`
+- `original_name` (TEXT): оригинальное имя
+- `mime_type` (TEXT, nullable)
+- `created_at` (TEXT)
+
 #### `course_quiz_questions`
 Вопросы теста урока.
 - `id` (TEXT, PK)
@@ -414,6 +425,34 @@ vkr/
 - `updated_at` (TEXT)
 - UNIQUE(`user_id`, `course_id`, `lesson_id`, `step_id`)
 
+#### `course_certificate_templates`
+Шаблон сертификата для конкретного курса (на уровне курса).
+
+- `course_id` (TEXT, PK): ссылка на `courses.id`.
+- `enabled` (INTEGER): включена ли выдача сертификата (0/1).
+- `title` (TEXT, nullable): заголовок для админки.
+- `template_html` (TEXT, nullable): HTML шаблона (с плейсхолдерами).
+- `template_css` (TEXT, nullable): CSS шаблона.
+- `updated_at` (TEXT): дата обновления.
+
+Плейсхолдеры:
+- `{{user_name}}`
+- `{{course_title}}`
+- `{{issued_date}}`
+- `{{serial}}`
+
+#### `course_certificates`
+Выданные сертификаты пользователям по курсам. Хранит **снимок** итогового HTML, чтобы сертификат не менялся задним числом при редактировании шаблона.
+
+- `id` (TEXT, PK): UUID сертификата.
+- `user_id` (TEXT, NOT NULL): ссылка на `users.id`.
+- `course_id` (TEXT, NOT NULL): ссылка на `courses.id`.
+- `serial` (TEXT, nullable): серийный номер.
+- `issued_at` (TEXT): дата выдачи.
+- `rendered_html` (TEXT, NOT NULL): итоговый HTML документа сертификата.
+- `meta_json` (TEXT, nullable): JSON с метаданными.
+- UNIQUE(`user_id`, `course_id`)
+
 ---
 
 ## 5. API
@@ -448,6 +487,9 @@ vkr/
 | POST | /api/tasks/submit | Отправка решения по заданию. Body: `{ taskId, prompt }`. Ответ: `{ message, score, analysis, pointsAwarded }` |
 | GET | /api/profile | Профиль текущего пользователя |
 | GET | /api/profile/courses | Курсы пользователя с прогрессом (мои курсы) |
+| GET | /api/profile/certificates | Сертификаты пользователя (список) |
+| GET | /api/profile/certificates/:id/html | HTML конкретного сертификата (только владелец) |
+| GET | /api/profile/certificates/:id/pdf | Скачать PDF сертификата (только владелец). PDF генерируется на сервере через Playwright/Chromium |
 | PUT | /api/profile | Обновление профиля. Body: `{ name }` и др. |
 | GET | /api/courses | Публичный список курсов (id, title, description, lessonsCount) |
 | GET | /api/courses/:id | Один курс с уроками (публично) |
@@ -490,11 +532,33 @@ vkr/
 | PUT/DELETE | /api/admin/prompts/:id | Обновление / удаление записи библиотеки |
 | GET/POST | /api/admin/courses | Курсы: список / создание (уроки с id сохраняются при редактировании) |
 | PUT/DELETE | /api/admin/courses/:id | Обновление / удаление курса |
+| GET | /api/admin/courses/:id/certificate-template | Получить шаблон сертификата курса (если шаблона нет — создаётся дефолтный) |
+| PUT | /api/admin/courses/:id/certificate-template | Сохранить шаблон сертификата курса |
 | POST | /api/admin/lessons/:lessonId/attachments | Загрузка файла к уроку (multipart, поле `file`) |
+| POST | /api/admin/lessons/:lessonId/videos | Загрузка видео к уроку (multipart, поле `file`). Возвращает `{ id, url, original_name, mime_type }` |
 | DELETE | /api/admin/attachments/:id | Удаление вложения |
 | GET | /api/admin/users | Список пользователей |
 | PUT | /api/admin/users/:id | Смена роли и т.д. (updateUserRole) |
 | DELETE | /api/admin/users/:id | Удаление пользователя |
+
+#### Видео в курсах (шаг `video`)
+
+Шаги уроков хранятся в таблице `course_lesson_steps`. Для `step_type = "video"` используется `payload`:
+- `payload.title` — заголовок
+- `payload.url` — ссылка на видео
+- `payload.description` — описание (опционально)
+
+Поддерживаются два сценария:
+- **Загруженный файл**: через админский endpoint `POST /api/admin/lessons/:lessonId/videos` (multipart `file`).
+  - Сервер сохраняет файл в `backend/uploads/...` и возвращает `url` вида **`/uploads/...`**
+  - Этот URL сохраняется в `payload.url`
+  - На странице урока (`frontend/js/course.js`) такой URL отображается встроенным плеером: `<video controls>`
+- **Внешняя ссылка (например YouTube)**: можно вручную указать в `payload.url`
+  - На странице урока такая ссылка отображается через `<iframe>` (embed для YouTube)
+
+Примечания:
+- Загрузка видео работает только для уже сохранённого урока (нужен `lessonId`).
+- Ограничения загрузки видео задаются в `backend/middleware/uploadMiddleware.js` (`uploadVideoSingle`): размер и список расширений.
 
 Формат полей заданий (tasks): `id`, `title`, `description`, `difficulty`, `points`, `type`. При создании `id` генерируется на бэкенде (uuid).
 
@@ -531,10 +595,18 @@ vkr/
   - Библиотека: `library.html`
   - Рейтинг: `leaderboard.html`
   - Профиль: `profile.html`
+  - Сертификат: `certificate.html` (просмотр одного сертификата)
   - Лаборатория (анализ промпта): `lab.html`
   - Админка: `admin/dashboard.html`, `admin/tasks.html`, `admin/prompts.html`, `admin/courses.html`, `admin/users.html` и т.д.
 
 ### 7.1. Почта и пользовательские сценарии
+
+### 7.2. Сертификаты курсов
+
+- **Автовыдача сертификата**: когда пользователь проходит все уроки курса (100% прогресс), сервер создаёт запись в `course_certificates` (HTML “замораживается” в `rendered_html`).
+- **Шаблон по умолчанию**: при создании нового курса через админку сразу сохраняется дефолтный шаблон в `course_certificate_templates`.
+- **Профиль**: сертификаты доступны в `profile.html` и открываются в модальном окне.
+- **Скачивание PDF**: выполняется через `GET /api/profile/certificates/:id/pdf`. PDF генерируется на сервере через Playwright/Chromium, чтобы гарантировать корректную вёрстку и стили.
 
 - **Подтверждение email**
   - При регистрации бэкенд отправляет письмо со ссылкой на `/profile?verifyToken=...`.
@@ -585,6 +657,13 @@ vkr/
 ```bash
 cd backend
 npm install --production
+```
+
+Если включено скачивание PDF сертификатов (по умолчанию включено), установите Chromium для Playwright:
+
+```bash
+cd backend
+npx playwright install chromium
 ```
 
 Создайте файл **`backend/.env`** (не коммитьте его в git). Минимум для продакшена:
