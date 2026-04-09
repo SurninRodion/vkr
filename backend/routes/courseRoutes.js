@@ -18,13 +18,12 @@ router.get('/', listCourses);
 router.get('/:id', getCourse);
 router.get('/:id/progress', authMiddleware, getCourseProgress);
 router.post('/:id/enroll', authMiddleware, requireVerifiedEmail, enroll);
-router.post('/:courseId/lessons/:lessonId/complete', authMiddleware, requireVerifiedEmail, completeLesson);
-router.post('/:courseId/lessons/:lessonId/quiz/submit', authMiddleware, requireVerifiedEmail, submitQuiz);
-router.post('/:courseId/lessons/:lessonId/steps/:stepId/check', authMiddleware, requireVerifiedEmail, checkStepAnswer);
+router.post('/:courseId/lessons/:lessonId/complete', authMiddleware, completeLesson);
+router.post('/:courseId/lessons/:lessonId/quiz/submit', authMiddleware, submitQuiz);
+router.post('/:courseId/lessons/:lessonId/steps/:stepId/check', authMiddleware, checkStepAnswer);
 router.post(
   '/:courseId/lessons/:lessonId/steps/:stepId/practical/submit',
   authMiddleware,
-  requireVerifiedEmail,
   submitPracticalStep
 );
 

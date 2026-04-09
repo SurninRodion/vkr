@@ -266,10 +266,13 @@ export async function apiSubmitQuiz(courseId, lessonId, answers) {
   );
 }
 
-export async function apiCheckStepAnswer(courseId, lessonId, stepId, answerIndex) {
+export async function apiCheckStepAnswer(courseId, lessonId, stepId, answerOrAnswers) {
+  const body = Array.isArray(answerOrAnswers)
+    ? { answers: answerOrAnswers }
+    : { answer: answerOrAnswers };
   return request(
     `/courses/${encodeURIComponent(courseId)}/lessons/${encodeURIComponent(lessonId)}/steps/${encodeURIComponent(stepId)}/check`,
-    { method: 'POST', body: { answer: answerIndex }, withAuth: true }
+    { method: 'POST', body, withAuth: true }
   );
 }
 

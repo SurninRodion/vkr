@@ -11,6 +11,22 @@ function escapeHtml(s) {
     .replace(/'/g, '&#039;');
 }
 
+function normalizeLegacyRenderedCertificateHtml(renderedHtml) {
+  const html = String(renderedHtml || '');
+  if (!html) return html;
+
+  // Нормализация для старых "замороженных" сертификатов:
+  // раньше в subtitle уже были ФИО+курс, но ниже они выводились отдельными блоками .name/.course.
+  // Меняем только если явно присутствуют оба блока — чтобы не ломать кастомные шаблоны.
+  if (!html.includes('class="name"') || !html.includes('class="course"')) return html;
+
+  const legacySentenceRe =
+    /Настоящим сертификатом подтверждается, что[\s\S]*?успешно завершил обучение по курсу\s*«[\s\S]*?»\./g;
+
+  if (!legacySentenceRe.test(html)) return html;
+  return html.replace(legacySentenceRe, 'Настоящим сертификатом подтверждается, что');
+}
+
 function defaultCertificateTemplate(courseTitle) {
   return {
     enabled: 1,
@@ -99,8 +115,13 @@ function defaultCertificateTemplate(courseTitle) {
         font-weight: 800;
         letter-spacing: .2px;
       }
+      .action {
+        margin-top: 5mm;
+        font-size: 16px;
+        color: var(--muted);
+      }
       .course {
-        margin-top: 3mm;
+        margin-top: 2mm;
         font-size: 20px;
         color: var(--ink);
       }
@@ -169,11 +190,12 @@ function defaultCertificateTemplate(courseTitle) {
             <div class="hero">
               <h1 class="title">Сертификат</h1>
               <p class="subtitle">
-                Настоящим сертификатом подтверждается, что {{user_name}} успешно завершил обучение по курсу «{{course_title}}».
+                Настоящим сертификатом подтверждается, что
               </p>
             </div>
 
             <div class="name">{{user_name}}</div>
+            <div class="action">успешно завершил обучение по курсу</div>
             <div class="course">«{{course_title}}»</div>
             <div class="line"></div>
 
@@ -429,9 +451,21 @@ function getCourse(req, res) {
                 try {
                   payload = r.payload ? JSON.parse(r.payload) : {};
                 } catch (_) {}
-                if (r.step_type === 'test' && typeof payload.correct_index !== 'undefined') {
-                  const { correct_index, ...rest } = payload;
-                  payload = rest;
+                if (r.step_type === 'test') {
+                  // Не отдаём правильные ответы на клиент.
+                  if (Array.isArray(payload.questions)) {
+                    payload = {
+                      ...payload,
+                      questions: payload.questions.map((q) => {
+                        if (!q || typeof q !== 'object') return q;
+                        const { correct_index, ...rest } = q;
+                        return rest;
+                      }),
+                    };
+                  } else if (typeof payload.correct_index !== 'undefined') {
+                    const { correct_index, ...rest } = payload;
+                    payload = rest;
+                  }
                 }
                 stepsByLesson[r.lesson_id].push({
                   id: r.id,
@@ -920,7 +954,7 @@ function getMyCertificateHtml(req, res) {
       if (err) return res.status(500).json({ message: 'Ошибка получения сертификата' });
       if (!row) return res.status(404).json({ message: 'Сертификат не найден' });
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      return res.status(200).send(row.rendered_html);
+      return res.status(200).send(normalizeLegacyRenderedCertificateHtml(row.rendered_html));
     }
   );
 }
@@ -954,7 +988,7 @@ function getMyCertificatePdf(req, res) {
       try {
         browser = await chromium.launch();
         const page = await browser.newPage({ viewport: { width: 1123, height: 794 } }); // A4 landscape @96dpi approx
-        await page.setContent(String(row.rendered_html || ''), { waitUntil: 'networkidle' });
+        await page.setContent(normalizeLegacyRenderedCertificateHtml(row.rendered_html), { waitUntil: 'networkidle' });
         await page.evaluate(async () => {
           try {
             // eslint-disable-next-line no-undef
@@ -1087,11 +1121,7 @@ function submitPracticalStep(req, res) {
  */
 function checkStepAnswer(req, res) {
   const { courseId, lessonId, stepId } = req.params;
-  const { answer } = req.body || {};
-  const answerIndex = typeof answer === 'number' ? answer : parseInt(answer, 10);
-  if (Number.isNaN(answerIndex) || answerIndex < 0) {
-    return res.status(400).json({ message: 'Передайте ответ answer (индекс варианта)' });
-  }
+  const { answer, answers } = req.body || {};
 
   db.get(
     'SELECT id FROM course_lessons WHERE id = ? AND course_id = ?',
@@ -1113,9 +1143,33 @@ function checkStepAnswer(req, res) {
           try {
             payload = step.payload ? JSON.parse(step.payload) : {};
           } catch (_) {}
+          // Новый формат: массив вопросов в payload.questions.
+          if (Array.isArray(payload.questions) && payload.questions.length > 0) {
+            if (!Array.isArray(answers)) {
+              return res.status(400).json({ message: 'Передайте answers (массив индексов ответов)' });
+            }
+            const qs = payload.questions;
+            const details = qs.map((q, i) => {
+              const userAnswer = typeof answers[i] === 'number' ? answers[i] : parseInt(answers[i], 10);
+              const correctIndex = typeof q?.correct_index === 'number' ? q.correct_index : 0;
+              const correct = Number.isFinite(userAnswer) && userAnswer === correctIndex;
+              return { correct, correctIndex, userAnswer };
+            });
+            const correctCount = details.filter((d) => d.correct).length;
+            const total = details.length || 1;
+            const score = Math.round((correctCount / total) * 100);
+            const passed = correctCount === details.length && details.length > 0;
+            return res.json({ passed, score });
+          }
+
+          // Старый формат: один вопрос.
+          const answerIndex = typeof answer === 'number' ? answer : parseInt(answer, 10);
+          if (Number.isNaN(answerIndex) || answerIndex < 0) {
+            return res.status(400).json({ message: 'Передайте ответ answer (индекс варианта)' });
+          }
           const correctIndex = typeof payload.correct_index === 'number' ? payload.correct_index : 0;
           const correct = answerIndex === correctIndex;
-          res.json({ correct });
+          return res.json({ correct });
         }
       );
     }

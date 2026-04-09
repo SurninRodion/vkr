@@ -93,8 +93,13 @@ function defaultCertificateTemplate(courseTitle) {
         font-weight: 800;
         letter-spacing: .2px;
       }
+      .action {
+        margin-top: 5mm;
+        font-size: 16px;
+        color: var(--muted);
+      }
       .course {
-        margin-top: 3mm;
+        margin-top: 2mm;
         font-size: 20px;
         color: var(--ink);
       }
@@ -163,11 +168,12 @@ function defaultCertificateTemplate(courseTitle) {
             <div class="hero">
               <h1 class="title">Сертификат</h1>
               <p class="subtitle">
-                Настоящим сертификатом подтверждается, что {{user_name}} успешно завершил обучение по курсу «{{course_title}}».
+                Настоящим сертификатом подтверждается, что
               </p>
             </div>
 
             <div class="name">{{user_name}}</div>
+            <div class="action">успешно завершил обучение по курсу</div>
             <div class="course">«{{course_title}}»</div>
             <div class="line"></div>
 

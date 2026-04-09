@@ -22,6 +22,57 @@ function nl2br(s) {
   return String(s ?? '').replace(/\n/g, '<br>');
 }
 
+/** Закрепляющий тест урока из таблицы course_quiz_questions (поле lesson.quiz в API). */
+function lessonHasLegacyQuiz(lesson) {
+  return Array.isArray(lesson?.quiz) && lesson.quiz.length > 0;
+}
+
+function lessonLegacyQuizRequired(lesson) {
+  if (!lessonHasLegacyQuiz(lesson)) return false;
+  return Number(lesson?.quiz_required ?? 1) === 1;
+}
+
+function renderLessonLegacyQuiz(lesson, courseId, isCompleted) {
+  const qs = lesson.quiz || [];
+  if (!qs.length) return '';
+  if (isCompleted) {
+    return `
+      <div class="lesson-legacy-quiz card" style="padding:12px;margin-top:12px;">
+        <p class="tag tag-green" style="margin:0">Закрепляющий тест пройден</p>
+      </div>
+    `;
+  }
+  return `
+    <div class="lesson-legacy-quiz card" style="padding:12px;margin-top:12px;" data-lesson-id="${escapeHtml(lesson.id)}">
+      <h4 class="lesson-step-title">Закрепляющий тест</h4>
+      <p class="muted" style="margin-top:0;">Порог прохождения — 80%. Ответьте на все вопросы.</p>
+      ${qs
+        .map(
+          (q, qi) => `
+        <div class="card" style="padding:12px;margin:10px 0;" data-quiz-q="${qi}">
+          <div class="lesson-step-question">${escapeHtml(q.question_text || `Вопрос ${qi + 1}`)}</div>
+          <div class="lesson-step-options-inner">
+            ${(Array.isArray(q.options) ? q.options : [])
+              .map(
+                (opt, oi) => `
+              <label class="lesson-step-option-label">
+                <input type="radio" name="legacy-quiz-${escapeHtml(lesson.id)}-q-${qi}" value="${oi}" />
+                <span>${escapeHtml(opt)}</span>
+              </label>
+            `
+              )
+              .join('')}
+          </div>
+        </div>
+      `
+        )
+        .join('')}
+      <button type="button" class="btn btn-primary btn-sm lesson-quiz-submit" data-course-id="${escapeHtml(courseId)}" data-lesson-id="${escapeHtml(lesson.id)}">Проверить ответы</button>
+      <p class="lesson-quiz-result muted" style="display:none;margin-top:10px;"></p>
+    </div>
+  `;
+}
+
 function buildPracticalMap(progress) {
   const m = new Map();
   (progress.practicalSubmissions || []).forEach((p) => {
@@ -93,17 +144,34 @@ function renderStepBlock(step, stepIndex, lessonId, courseId, practicalSaved, pr
       break;
     }
     case 'test':
-      const options = p.options || [];
+      const required = p.required === true || p.required === 1;
+      const questions = Array.isArray(p.questions) && p.questions.length > 0
+        ? p.questions
+        : (p.question ? [{ question: p.question, options: p.options || [] }] : []);
       inner = `
         <h4 class="lesson-step-title">Вопрос</h4>
-        <p class="lesson-step-question">${escapeHtml(p.question || '')}</p>
-        <div class="lesson-step-options" data-step-id="${stepId}">
-          ${options.map((opt, oi) => `
-            <label class="lesson-step-option-label">
-              <input type="radio" name="step-${stepId}" value="${oi}" />
-              <span>${escapeHtml(opt)}</span>
-            </label>
-          `).join('')}
+        ${
+          required
+            ? `<p class="muted" style="margin-top:0;">Этот тест обязателен для завершения урока.</p>`
+            : `<p class="muted" style="margin-top:0;">Этот тест необязателен — можно пропустить.</p>`
+        }
+        <div class="lesson-step-options" data-step-id="${stepId}" data-required="${required ? '1' : '0'}">
+          ${(questions || []).map((q, qi) => {
+            const opts = Array.isArray(q.options) ? q.options : [];
+            return `
+              <div class="card" style="padding:12px; margin:10px 0;" data-step-q="${qi}">
+                <div class="lesson-step-question">${escapeHtml(q.question || `Вопрос ${qi + 1}`)}</div>
+                <div class="lesson-step-options-inner">
+                  ${opts.map((opt, oi) => `
+                    <label class="lesson-step-option-label">
+                      <input type="radio" name="step-${stepId}-q-${qi}" value="${oi}" />
+                      <span>${escapeHtml(opt)}</span>
+                    </label>
+                  `).join('')}
+                </div>
+              </div>
+            `;
+          }).join('')}
         </div>
         <button type="button" class="btn btn-outline btn-sm lesson-step-check" data-course-id="${escapeHtml(courseId)}" data-lesson-id="${escapeHtml(lessonId)}" data-step-id="${stepId}">Проверить</button>
         <p class="lesson-step-result" data-step-id="${stepId}" style="display:none;"></p>
@@ -147,7 +215,7 @@ function renderStepBlock(step, stepIndex, lessonId, courseId, practicalSaved, pr
   return `
     <div class="lesson-step-block" data-step-index="${stepIndex}" data-step-id="${stepId}">
       <div class="lesson-step-body">${inner}</div>
-      <button type="button" class="btn btn-outline btn-sm lesson-step-next" data-step-index="${stepIndex}" style="display:none;">Далее</button>
+      <button type="button" class="btn btn-outline btn-sm lesson-step-next" data-step-index="${stepIndex}" style="${type === 'test' && !(p.required === true || p.required === 1) ? 'display:inline-block;' : 'display:none;'}">Далее</button>
     </div>
   `;
 }
@@ -174,49 +242,74 @@ function renderLessonSteps(
     return block;
   }).join('');
   const isCompleted = completedSet.has(lesson.id);
-  const lessonHasQuiz = Array.isArray(lesson.quiz) && lesson.quiz.length > 0;
-  const quizRequired = Number(lesson.quiz_required ?? 1) === 1;
-  const quizBlock = lessonHasQuiz && progress.enrolled && !isCompleted
-    ? `
-      <div class="lesson-quiz-block" data-lesson-id="${escapeHtml(lesson.id)}" style="display:none;">
-        <div class="quiz-questions">
-          ${(lesson.quiz || []).map((q, qi) => `
-            <div class="quiz-q" data-q-index="${qi}">
-              <div class="quiz-q-text">${escapeHtml(q.question_text)}</div>
-              <div class="quiz-options">
-                ${(q.options || []).map((opt, oi) => `
-                  <label class="quiz-option-label">
-                    <input type="radio" name="quiz-${escapeHtml(lesson.id)}-${qi}" value="${oi}" />
-                    <span>${escapeHtml(opt)}</span>
-                  </label>
-                `).join('')}
-              </div>
-            </div>
-          `).join('')}
-        </div>
-        <div class="quiz-result" data-lesson-id="${escapeHtml(lesson.id)}" style="display:none;"></div>
-        <button type="button" class="btn btn-primary btn-sm quiz-submit" data-lesson-id="${escapeHtml(lesson.id)}">Отправить ответы</button>
-      </div>
-    `
-    : '';
-  const completeBtn = progress.enrolled && !isCompleted && (!lessonHasQuiz || !quizRequired)
+  const legacyQuiz = lessonHasLegacyQuiz(lesson);
+  const legacyRequired = lessonLegacyQuizRequired(lesson);
+  const showManualComplete =
+    progress.enrolled &&
+    !isCompleted &&
+    !(legacyQuiz && legacyRequired);
+  const completeBtn = showManualComplete
     ? `<button type="button" class="btn btn-outline btn-sm lesson-complete lesson-complete-steps" data-lesson-id="${escapeHtml(lesson.id)}">Отметить урок пройденным</button>`
     : progress.enrolled && isCompleted
       ? '<span class="tag tag-green">Пройден</span>'
-      : '';
-  const quizTriggerBtn = progress.enrolled && !isCompleted && lessonHasQuiz
-    ? `<button type="button" class="btn btn-outline btn-sm lesson-quiz-trigger" data-lesson-id="${escapeHtml(lesson.id)}">Пройти тест</button>`
-    : '';
+      : legacyQuiz && legacyRequired && !isCompleted
+        ? '<span class="muted lesson-complete-pending-hint" style="font-size:13px;">Завершите закрепляющий тест ниже.</span>'
+        : '';
+  const legacyQuizHtml = legacyQuiz ? renderLessonLegacyQuiz(lesson, courseId, isCompleted) : '';
   return `
     <div class="lesson-steps-container" data-lesson-id="${escapeHtml(lesson.id)}">
       ${stepsHtml}
+      ${legacyQuizHtml}
       <div class="lesson-steps-complete-row" style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-        ${quizTriggerBtn}
         ${completeBtn}
       </div>
-      ${quizBlock}
     </div>
   `;
+}
+
+function stepPassStorageKey(courseId) {
+  return `course_step_test_passed::${courseId}`;
+}
+
+function loadPassedSteps(courseId) {
+  try {
+    const raw = localStorage.getItem(stepPassStorageKey(courseId));
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function savePassedStep(courseId, lessonId, stepId) {
+  try {
+    const m = loadPassedSteps(courseId);
+    const key = `${lessonId}::${stepId}`;
+    m[key] = 1;
+    localStorage.setItem(stepPassStorageKey(courseId), JSON.stringify(m));
+  } catch (_) {}
+}
+
+function isStepPassed(courseId, lessonId, stepId) {
+  const m = loadPassedSteps(courseId);
+  return m[`${lessonId}::${stepId}`] === 1;
+}
+
+function updateLessonCompletionGate(root, courseId) {
+  root.querySelectorAll('.lesson-steps-container').forEach((container) => {
+    const lessonId = container.getAttribute('data-lesson-id');
+    if (!lessonId) return;
+    const requiredOptions = container.querySelectorAll('.lesson-step-options[data-required="1"]');
+    const requiredStepIds = Array.from(requiredOptions)
+      .map((el) => el.getAttribute('data-step-id'))
+      .filter(Boolean);
+    if (!requiredStepIds.length) return;
+    const allPassed = requiredStepIds.every((sid) => isStepPassed(courseId, lessonId, sid));
+    const completeBtn = container.querySelector('.lesson-complete-steps, .lesson-complete');
+    if (!completeBtn) return;
+    completeBtn.disabled = !allPassed;
+    completeBtn.title = allPassed ? '' : 'Пройдите обязательные тесты в шагах урока';
+  });
 }
 
 function getCourseId() {
@@ -536,7 +629,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     `
         : '';
 
-    const hasQuiz = (lesson) => Array.isArray(lesson.quiz) && lesson.quiz.length > 0;
     const hasSteps = (lesson) => Array.isArray(lesson.steps) && lesson.steps.length > 0;
     const attachmentsHtml = (attachments) => {
       if (!attachments?.length) return '';
@@ -557,16 +649,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       .map(({ lesson, moduleIndex, moduleTitle }, i) => {
         const isCompleted = completedSet.has(lesson.id);
         const isLocked = !progress.enrolled || (allowedLessonIds.size && !allowedLessonIds.has(lesson.id));
-        const lessonHasQuiz = hasQuiz(lesson);
         const lessonHasSteps = hasSteps(lesson);
+        const legacyQuizStandalone = lessonHasLegacyQuiz(lesson);
+        const legacyQuizReqStandalone = lessonLegacyQuizRequired(lesson);
         let completeBtn = '';
         if (!isLocked && !lessonHasSteps) {
-          if (progress.enrolled && !isCompleted) {
-            completeBtn = lessonHasQuiz
-              ? `<button type="button" class="btn btn-outline btn-sm lesson-quiz-trigger" data-lesson-id="${escapeHtml(lesson.id)}">Пройти тест</button>`
-              : `<button type="button" class="btn btn-outline btn-sm lesson-complete" data-lesson-id="${escapeHtml(lesson.id)}">Отметить пройденным</button>`;
+          if (progress.enrolled && !isCompleted && !(legacyQuizStandalone && legacyQuizReqStandalone)) {
+            completeBtn = `<button type="button" class="btn btn-outline btn-sm lesson-complete" data-lesson-id="${escapeHtml(lesson.id)}">Отметить пройденным</button>`;
           } else if (progress.enrolled && isCompleted) {
             completeBtn = '<span class="tag tag-green">Пройден</span>';
+          } else if (progress.enrolled && legacyQuizStandalone && legacyQuizReqStandalone && !isCompleted) {
+            completeBtn = '<span class="muted lesson-complete-pending-hint" style="font-size:13px;">Завершите закрепляющий тест ниже.</span>';
           }
         }
         const lockedHintHtml = isLocked
@@ -576,36 +669,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           ? `<div class="lesson-content">${escapeHtml(lesson.content)}</div>`
           : '';
         const attHtml = !isLocked ? attachmentsHtml(lesson.attachments) : '';
-        const quizBlock = !isLocked && !lessonHasSteps && lessonHasQuiz && progress.enrolled && !isCompleted
-            ? `
-          <div class="lesson-quiz-block" data-lesson-id="${escapeHtml(lesson.id)}" style="display:none;">
-            <div class="quiz-questions">
-              ${(lesson.quiz || [])
-                .map(
-                  (q, qi) => `
-                <div class="quiz-q" data-q-index="${qi}">
-                  <div class="quiz-q-text">${escapeHtml(q.question_text)}</div>
-                  <div class="quiz-options">
-                    ${(q.options || [])
-                      .map(
-                        (opt, oi) => `
-                      <label class="quiz-option-label">
-                        <input type="radio" name="quiz-${escapeHtml(lesson.id)}-${qi}" value="${oi}" />
-                        <span>${escapeHtml(opt)}</span>
-                      </label>
-                    `
-                      )
-                      .join('')}
-                  </div>
-                </div>
-              `
-                )
-                .join('')}
-            </div>
-            <div class="quiz-result" data-lesson-id="${escapeHtml(lesson.id)}" style="display:none;"></div>
-            <button type="button" class="btn btn-primary btn-sm quiz-submit" data-lesson-id="${escapeHtml(lesson.id)}">Отправить ответы</button>
-          </div>
-        `
+        const legacyQuizHtmlStandalone =
+          !isLocked && !lessonHasSteps && legacyQuizStandalone
+            ? renderLessonLegacyQuiz(lesson, courseId, isCompleted)
             : '';
         const stepsHtml = !isLocked && lessonHasSteps
           ? renderLessonSteps(
@@ -632,7 +698,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           ${lockedHintHtml}
           ${contentHtml}
           ${attHtml}
-          ${quizBlock}
+          ${legacyQuizHtmlStandalone}
           ${stepsHtml}
           ${navHtml}
         </li>
@@ -847,16 +913,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       const lessonsHtmlNew = list.map(({ lesson, moduleIndex, moduleTitle }, i) => {
         const isCompleted = completedSet.has(lesson.id);
         const isLocked = !progress.enrolled || (allowedLessonIds.size && !allowedLessonIds.has(lesson.id));
-        const lessonHasQuiz = hasQuiz(lesson);
         const lessonHasSteps = hasSteps(lesson);
+        const legacyQuizStandalone = lessonHasLegacyQuiz(lesson);
+        const legacyQuizReqStandalone = lessonLegacyQuizRequired(lesson);
         let completeBtn = '';
         if (!isLocked && !lessonHasSteps) {
-          if (progress.enrolled && !isCompleted) {
-            completeBtn = lessonHasQuiz
-              ? `<button type="button" class="btn btn-outline btn-sm lesson-quiz-trigger" data-lesson-id="${escapeHtml(lesson.id)}">Пройти тест</button>`
-              : `<button type="button" class="btn btn-outline btn-sm lesson-complete" data-lesson-id="${escapeHtml(lesson.id)}">Отметить пройденным</button>`;
+          if (progress.enrolled && !isCompleted && !(legacyQuizStandalone && legacyQuizReqStandalone)) {
+            completeBtn = `<button type="button" class="btn btn-outline btn-sm lesson-complete" data-lesson-id="${escapeHtml(lesson.id)}">Отметить пройденным</button>`;
           } else if (progress.enrolled && isCompleted) {
             completeBtn = '<span class="tag tag-green">Пройден</span>';
+          } else if (progress.enrolled && legacyQuizStandalone && legacyQuizReqStandalone && !isCompleted) {
+            completeBtn = '<span class="muted lesson-complete-pending-hint" style="font-size:13px;">Завершите закрепляющий тест ниже.</span>';
           }
         }
         const lockedHintHtml = isLocked
@@ -864,27 +931,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           : '';
         const contentHtml = !isLocked && !lessonHasSteps && lesson.content ? `<div class="lesson-content">${escapeHtml(lesson.content)}</div>` : '';
         const attHtml = !isLocked ? attachmentsHtml(lesson.attachments) : '';
-        const quizBlock = !isLocked && !lessonHasSteps && lessonHasQuiz && progress.enrolled && !isCompleted ? `
-          <div class="lesson-quiz-block" data-lesson-id="${escapeHtml(lesson.id)}" style="display:none;">
-            <div class="quiz-questions">
-              ${(lesson.quiz || []).map((q, qi) => `
-                <div class="quiz-q" data-q-index="${qi}">
-                  <div class="quiz-q-text">${escapeHtml(q.question_text)}</div>
-                  <div class="quiz-options">
-                    ${(q.options || []).map((opt, oi) => `
-                      <label class="quiz-option-label">
-                        <input type="radio" name="quiz-${escapeHtml(lesson.id)}-${qi}" value="${oi}" />
-                        <span>${escapeHtml(opt)}</span>
-                      </label>
-                    `).join('')}
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-            <div class="quiz-result" data-lesson-id="${escapeHtml(lesson.id)}" style="display:none;"></div>
-            <button type="button" class="btn btn-primary btn-sm quiz-submit" data-lesson-id="${escapeHtml(lesson.id)}">Отправить ответы</button>
-          </div>
-        ` : '';
+        const legacyQuizHtmlStandalone =
+          !isLocked && !lessonHasSteps && legacyQuizStandalone
+            ? renderLessonLegacyQuiz(lesson, courseId, isCompleted)
+            : '';
         const practicalMapNav = buildPracticalMap(progress);
         const stepsHtmlNew = !isLocked && lessonHasSteps
           ? renderLessonSteps(
@@ -909,7 +959,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             ${lockedHintHtml}
             ${contentHtml}
             ${attHtml}
-            ${quizBlock}
+            ${legacyQuizHtmlStandalone}
             ${stepsHtmlNew}
             ${navHtmlNew}
           </li>
@@ -932,6 +982,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (contentEl) contentEl.innerHTML = contentHtmlNew;
       initStepsVisibility();
       attachContentListeners();
+      updateLessonCompletionGate(root, courseId);
       syncProgramSidebarHeight();
     }
 
@@ -982,19 +1033,46 @@ document.addEventListener('DOMContentLoaded', async () => {
           const courseIdParam = btn.getAttribute('data-course-id');
           if (!stepId || !lessonId || !courseIdParam) return;
           const optionsWrap = btn.closest('.lesson-step-block')?.querySelector('.lesson-step-options');
-          const radio = optionsWrap?.querySelector('input[type="radio"]:checked');
-          if (!radio) { showToast('Выберите вариант ответа.', 'error'); return; }
+          const required = optionsWrap?.getAttribute('data-required') === '1';
+          const qBlocks = optionsWrap?.querySelectorAll('[data-step-q]');
+          let answerPayload;
+          if (qBlocks && qBlocks.length > 0) {
+            const answers = [];
+            qBlocks.forEach((qEl, qi) => {
+              const r = qEl.querySelector('input[type="radio"]:checked');
+              answers.push(r ? parseInt(r.value, 10) : -1);
+            });
+            if (answers.some((a) => a < 0)) {
+              showToast('Ответьте на все вопросы.', 'error');
+              return;
+            }
+            answerPayload = answers;
+          } else {
+            const radio = optionsWrap?.querySelector('input[type="radio"]:checked');
+            if (!radio) { showToast('Выберите вариант ответа.', 'error'); return; }
+            answerPayload = parseInt(radio.value, 10);
+          }
           btn.disabled = true;
           try {
-            const result = await apiCheckStepAnswer(courseIdParam, lessonId, stepId, parseInt(radio.value, 10));
+            const result = await apiCheckStepAnswer(courseIdParam, lessonId, stepId, answerPayload);
             const resultEl = btn.closest('.lesson-step-block')?.querySelector(`.lesson-step-result[data-step-id="${stepId}"]`);
+            const passed = result && (result.passed === true || result.correct === true);
             if (resultEl) {
               resultEl.style.display = 'block';
-              resultEl.textContent = result.correct ? 'Верно!' : 'Неверно. Попробуйте ещё раз.';
-              resultEl.style.color = result.correct ? 'var(--color-success, #059669)' : 'var(--color-error, #b91c1c)';
+              if (typeof result.score === 'number') {
+                resultEl.textContent = passed ? `Верно! Результат: ${result.score}%` : `Неверно. Результат: ${result.score}%`;
+              } else {
+                resultEl.textContent = passed ? 'Верно!' : 'Неверно. Попробуйте ещё раз.';
+              }
+              resultEl.style.color = passed ? 'var(--color-success, #059669)' : 'var(--color-error, #b91c1c)';
             }
-            if (result.correct) {
+            if (passed) {
+              savePassedStep(courseIdParam, lessonId, stepId);
               btn.style.display = 'none';
+              const nextBtn = btn.closest('.lesson-step-block')?.querySelector('.lesson-step-next');
+              if (nextBtn) nextBtn.style.display = 'inline-block';
+              updateLessonCompletionGate(root, courseIdParam);
+            } else if (!required) {
               const nextBtn = btn.closest('.lesson-step-block')?.querySelector('.lesson-step-next');
               if (nextBtn) nextBtn.style.display = 'inline-block';
             }
@@ -1006,6 +1084,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         btn.addEventListener('click', async () => {
           const lessonId = btn.getAttribute('data-lesson-id');
           if (!lessonId) return;
+          updateLessonCompletionGate(root, courseId);
+          if (btn.disabled) {
+            showToast('Сначала пройдите обязательные тесты в шагах урока.', 'error');
+            return;
+          }
           btn.disabled = true;
           try {
             await apiCompleteLesson(courseId, lessonId);
@@ -1017,102 +1100,47 @@ document.addEventListener('DOMContentLoaded', async () => {
           }
         });
       });
-      root.querySelectorAll('.lesson-quiz-trigger').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const lessonId = btn.getAttribute('data-lesson-id');
-          const block = root.querySelector(`.lesson-quiz-block[data-lesson-id="${lessonId}"]`);
-          if (block) block.style.display = block.style.display === 'none' ? 'block' : 'none';
-        });
-      });
-      root.querySelectorAll('.quiz-submit').forEach((btn) => {
+      root.querySelectorAll('.lesson-quiz-submit').forEach((btn) => {
         btn.addEventListener('click', async () => {
+          const courseIdParam = btn.getAttribute('data-course-id');
           const lessonId = btn.getAttribute('data-lesson-id');
-          const block = root.querySelector(`.lesson-quiz-block[data-lesson-id="${lessonId}"]`);
-          if (!block) return;
-          const questions = block.querySelectorAll('.quiz-q');
-          const answers = [];
-          questions.forEach((qEl) => {
-            const radio = qEl.querySelector('input[type="radio"]:checked');
-            answers.push(radio ? parseInt(radio.value, 10) : -1);
-          });
-          if (answers.some((a) => a < 0)) { showToast('Ответьте на все вопросы.', 'error'); return; }
+          const block = btn.closest('.lesson-legacy-quiz');
+          if (!courseIdParam || !lessonId || !block) return;
+          const qEls = block.querySelectorAll('[data-quiz-q]');
+          const ordered = [];
+          for (const el of qEls) {
+            const checked = el.querySelector('input[type="radio"]:checked');
+            if (!checked) {
+              showToast('Ответьте на все вопросы теста.', 'error');
+              return;
+            }
+            ordered.push(parseInt(checked.value, 10));
+          }
           btn.disabled = true;
           try {
-            const result = await apiSubmitQuiz(courseId, lessonId, answers);
-            const resultEl = block.querySelector(`.quiz-result[data-lesson-id="${lessonId}"]`);
-            const details = Array.isArray(result.details) ? result.details : [];
-            const scoreText = typeof result.score === 'number' ? `${result.score}%` : '—';
+            const result = await apiSubmitQuiz(courseIdParam, lessonId, ordered);
+            const resultEl = block.querySelector('.lesson-quiz-result');
             if (resultEl) {
-              const passedClass = result.passed ? 'quiz-result--passed' : 'quiz-result--failed';
-              resultEl.className = `quiz-result ${passedClass}`;
               resultEl.style.display = 'block';
-              const resetBtn = result.passed
-                ? ''
-                : `<button type="button" class="btn btn-outline btn-sm quiz-reset" data-lesson-id="${escapeHtml(lessonId)}" style="margin-top:8px">Пройти ещё раз</button>`;
-              resultEl.innerHTML = `
-                <div class="quiz-result-text">Результат: <strong>${escapeHtml(scoreText)}</strong> правильных ответов.</div>
-                ${resetBtn}
-              `;
+              resultEl.textContent =
+                result.message ||
+                (result.passed ? 'Тест пройден.' : `Набрано ${result.score ?? 0}%.`);
             }
-
-            // Подсветка правильных/неправильных вариантов (после отправки).
-            questions.forEach((qEl, qIndex) => {
-              const d = details[qIndex];
-              if (!d) return;
-              const correctIndex = typeof d.correctIndex === 'number' ? d.correctIndex : -1;
-              const userAnswer = typeof d.userAnswer === 'number' ? d.userAnswer : -1;
-              const labels = qEl.querySelectorAll('.quiz-option-label');
-              labels.forEach((labelEl, optIndex) => {
-                labelEl.classList.remove('quiz-option-label--correct', 'quiz-option-label--wrong', 'quiz-option-label--chosen');
-                if (optIndex === userAnswer) labelEl.classList.add('quiz-option-label--chosen');
-                if (optIndex === correctIndex) labelEl.classList.add('quiz-option-label--correct');
-                if (optIndex === userAnswer && userAnswer !== correctIndex) labelEl.classList.add('quiz-option-label--wrong');
-              });
-              // При успешном прохождении блокируем изменение ответов.
-              if (result.passed) {
-                qEl.querySelectorAll('input[type="radio"]').forEach((r) => { r.disabled = true; });
-              }
-            });
-
             if (result.passed) {
-              showToast(result.message || 'Тест пройден. Урок завершён.', 'success');
+              showToast(result.message || 'Урок завершён.', 'success');
               markLessonComplete(lessonId);
+              block.innerHTML = '<p class="tag tag-green" style="margin:0">Закрепляющий тест пройден</p>';
             } else {
-              showToast(result.message || `Порог не достигнут (${result.score}%).`, 'error');
-              btn.disabled = false;
+              showToast(result.message || `Набрано ${result.score ?? 0}%`, 'error');
             }
-          } catch (e) { showToast(e.message || 'Ошибка отправки.', 'error'); btn.disabled = false; }
+          } catch (e) {
+            showToast(e.message || 'Ошибка отправки теста.', 'error');
+          } finally {
+            btn.disabled = false;
+          }
         });
       });
-      attachQuizResetListenersOnce();
       attachPracticalStepListenersOnce();
-    }
-
-    function attachQuizResetListenersOnce() {
-      if (root.dataset.quizResetBound === '1') return;
-      root.dataset.quizResetBound = '1';
-      root.addEventListener('click', (e) => {
-        const btn = e.target.closest('.quiz-reset');
-        if (!btn || !root.contains(btn)) return;
-        e.preventDefault();
-        const lessonId = btn.getAttribute('data-lesson-id');
-        const block = root.querySelector(`.lesson-quiz-block[data-lesson-id="${lessonId}"]`);
-        if (!block) return;
-        const resultEl = block.querySelector(`.quiz-result[data-lesson-id="${lessonId}"]`);
-        if (resultEl) {
-          resultEl.style.display = 'none';
-          resultEl.innerHTML = '';
-        }
-        block.querySelectorAll('.quiz-q').forEach((qEl) => {
-          qEl.querySelectorAll('.quiz-option-label').forEach((labelEl) => {
-            labelEl.classList.remove('quiz-option-label--correct', 'quiz-option-label--wrong', 'quiz-option-label--chosen');
-          });
-          qEl.querySelectorAll('input[type="radio"]').forEach((r) => {
-            r.disabled = false;
-            r.checked = false;
-          });
-        });
-      });
     }
 
     function attachPracticalStepListenersOnce() {
@@ -1232,15 +1260,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     function markLessonComplete(lessonId) {
       const item = root.querySelector(`.course-lesson-item[data-lesson-id="${lessonId}"]`);
       if (!item) return;
-      const btn = item.querySelector('.lesson-complete, .lesson-quiz-trigger');
-      const quizBlock = item.querySelector('.lesson-quiz-block');
+      const makeDoneTag = () => {
+        const el = document.createElement('span');
+        el.className = 'tag tag-green';
+        el.textContent = 'Пройден';
+        return el;
+      };
+      const btn = item.querySelector('.lesson-complete, .lesson-complete-steps');
+      const hint = item.querySelector('.lesson-complete-pending-hint');
       if (btn) {
-        const tag = document.createElement('span');
-        tag.className = 'tag tag-green';
-        tag.textContent = 'Пройден';
-        btn.replaceWith(tag);
+        btn.replaceWith(makeDoneTag());
+      } else if (hint) {
+        hint.replaceWith(makeDoneTag());
       }
-      if (quizBlock) quizBlock.style.display = 'none';
 
       completedSet.add(lessonId);
       progress.completedLessonIds = Array.from(completedSet);
