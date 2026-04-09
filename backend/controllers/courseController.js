@@ -168,7 +168,9 @@ function defaultCertificateTemplate(courseTitle) {
 
             <div class="hero">
               <h1 class="title">Сертификат</h1>
-              <p class="subtitle">Подтверждает успешное прохождение курса</p>
+              <p class="subtitle">
+                Настоящим сертификатом подтверждается, что {{user_name}} успешно завершил обучение по курсу «{{course_title}}».
+              </p>
             </div>
 
             <div class="name">{{user_name}}</div>
@@ -388,8 +390,8 @@ function listCourses(req, res) {
  */
 function getCourse(req, res) {
   const { id } = req.params;
-  db.get(
-    'SELECT id, title, description FROM courses WHERE id = ?',
+      db.get(
+        'SELECT id, title, description FROM courses WHERE id = ?',
     [id],
     (err, course) => {
       if (err) {
@@ -400,7 +402,7 @@ function getCourse(req, res) {
         return res.status(404).json({ message: 'Курс не найден' });
       }
       db.all(
-        `SELECT id, course_id, module_id, title, content, order_index FROM course_lessons WHERE course_id = ? ORDER BY order_index ASC`,
+        `SELECT id, course_id, module_id, title, content, order_index, quiz_required FROM course_lessons WHERE course_id = ? ORDER BY order_index ASC`,
         [id],
         (err2, lessons) => {
           if (err2) {
@@ -474,6 +476,7 @@ function getCourse(req, res) {
                       });
                       const lessonsWithExtra = lessonList.map((l) => ({
                         ...l,
+                        quiz_required: typeof l.quiz_required === 'number' ? l.quiz_required : Number(l.quiz_required ?? 1),
                         attachments: attByLesson[l.id] || [],
                         quiz: quizByLesson[l.id] || [],
                         steps: (stepsByLesson[l.id] || []).sort((a, b) => a.order_index - b.order_index)
@@ -558,7 +561,7 @@ function completeLesson(req, res) {
   const { courseId, lessonId } = req.params;
 
   db.get(
-    'SELECT id FROM course_lessons WHERE id = ? AND course_id = ?',
+    'SELECT id, quiz_required FROM course_lessons WHERE id = ? AND course_id = ?',
     [lessonId, courseId],
     (err, lesson) => {
       if (err) {
@@ -574,7 +577,8 @@ function completeLesson(req, res) {
         [lessonId],
         (errQ, hasQuiz) => {
           if (errQ) return res.status(500).json({ message: 'Ошибка сервера' });
-          if (hasQuiz) {
+          const required = Number(lesson.quiz_required ?? 1) === 1;
+          if (hasQuiz && required) {
             return res.status(400).json({
               message: 'У этого урока есть закрепляющий тест. Пройдите тест, чтобы завершить урок.'
             });
@@ -614,7 +618,7 @@ function submitQuiz(req, res) {
   }
 
   db.get(
-    'SELECT id FROM course_lessons WHERE id = ? AND course_id = ?',
+    'SELECT id, quiz_required FROM course_lessons WHERE id = ? AND course_id = ?',
     [lessonId, courseId],
     (err, lesson) => {
       if (err) return res.status(500).json({ message: 'Ошибка сервера' });
@@ -629,20 +633,42 @@ function submitQuiz(req, res) {
             return res.status(400).json({ message: 'У этого урока нет теста' });
           }
           let correct = 0;
-          questions.forEach((q, i) => {
-            const userAnswer = typeof answers[i] === 'number' ? answers[i] : parseInt(answers[i], 10);
-            if (userAnswer === q.correct_index) correct++;
+          const details = questions.map((q, i) => {
+            const raw = answers[i];
+            const userAnswer = typeof raw === 'number' ? raw : parseInt(raw, 10);
+            const normalizedUserAnswer = Number.isFinite(userAnswer) ? userAnswer : -1;
+            const correctIndex = typeof q.correct_index === 'number' ? q.correct_index : parseInt(q.correct_index, 10) || 0;
+            const isCorrect = normalizedUserAnswer === correctIndex;
+            if (isCorrect) correct++;
+            return {
+              questionId: q.id,
+              userAnswer: normalizedUserAnswer,
+              correctIndex,
+              correct: isCorrect,
+            };
           });
           const total = questions.length;
           const score = total > 0 ? correct / total : 0;
           const passed = score >= QUIZ_PASS_THRESHOLD;
+          const required = Number(lesson.quiz_required ?? 1) === 1;
 
           if (!passed) {
             return res.json({
               passed: false,
               score: Math.round(score * 100),
               total,
+              details,
               message: `Порог прохождения ${Math.round(QUIZ_PASS_THRESHOLD * 100)}%. Попробуйте ещё раз.`
+            });
+          }
+
+          if (!required) {
+            return res.json({
+              passed: true,
+              score: Math.round(score * 100),
+              total,
+              details,
+              message: 'Тест пройден.'
             });
           }
 
@@ -656,6 +682,7 @@ function submitQuiz(req, res) {
                   passed: true,
                   score: Math.round(score * 100),
                   total,
+                  details,
                   message: 'Тест пройден. Урок завершён.'
                 });
               });

@@ -162,7 +162,9 @@ function defaultCertificateTemplate(courseTitle) {
 
             <div class="hero">
               <h1 class="title">Сертификат</h1>
-              <p class="subtitle">Подтверждает успешное прохождение курса</p>
+              <p class="subtitle">
+                Настоящим сертификатом подтверждается, что {{user_name}} успешно завершил обучение по курсу «{{course_title}}».
+              </p>
             </div>
 
             <div class="name">{{user_name}}</div>
@@ -804,6 +806,25 @@ function saveStepsForLesson(lessonId, steps, done) {
   });
 }
 
+function saveQuizForLesson(lessonId, questions, done) {
+  db.run('DELETE FROM course_quiz_questions WHERE lesson_id = ?', [lessonId], () => {
+    if (!Array.isArray(questions) || !questions.length) return done();
+    const stmt = db.prepare(
+      `INSERT INTO course_quiz_questions (id, lesson_id, question_text, options, correct_index, order_index) VALUES (?, ?, ?, ?, ?, ?)`
+    );
+    questions.forEach((q, i) => {
+      if (!q?.question_text || !Array.isArray(q.options) || q.options.length < 2) return;
+      const opts = JSON.stringify(q.options);
+      const correct = Math.max(
+        0,
+        Math.min(Number(q.correct_index ?? 0) || 0, (q.options?.length || 1) - 1)
+      );
+      stmt.run(uuidv4(), lessonId, String(q.question_text).trim(), opts, correct, i);
+    });
+    stmt.finalize(done);
+  });
+}
+
 async function createCourse(req, res) {
   try {
     const { title, description, lessons = [], modules: modulesPayload } = req.body || {};
@@ -858,7 +879,7 @@ async function createCourse(req, res) {
               return res.status(500).json({ message: 'Ошибка создания модулей' });
             }
             const lessonStmt = db.prepare(
-              `INSERT INTO course_lessons (id, course_id, module_id, title, content, order_index) VALUES (?, ?, ?, ?, ?, ?)`
+              `INSERT INTO course_lessons (id, course_id, module_id, title, content, order_index, quiz_required) VALUES (?, ?, ?, ?, ?, ?, ?)`
             );
             let lessonIndex = 0;
             const insertedLessons = [];
@@ -868,8 +889,18 @@ async function createCourse(req, res) {
                 if (!lesson.title) return;
                 const lessonId = uuidv4();
                 const orderIndex = typeof lesson.order_index === 'number' ? lesson.order_index : lessonIndex;
-                lessonStmt.run(lessonId, id, modId, lesson.title, lesson.content || '', orderIndex);
-                insertedLessons.push({ id: lessonId, title: lesson.title, content: lesson.content || '', order_index: orderIndex, module_id: modId, steps: lesson.steps || [] });
+                const quizRequired = lesson.quiz_required === 0 || lesson.quiz_required === false ? 0 : 1;
+                lessonStmt.run(lessonId, id, modId, lesson.title, lesson.content || '', orderIndex, quizRequired);
+                insertedLessons.push({
+                  id: lessonId,
+                  title: lesson.title,
+                  content: lesson.content || '',
+                  order_index: orderIndex,
+                  module_id: modId,
+                  steps: lesson.steps || [],
+                  quiz_questions: lesson.quiz_questions || [],
+                  quiz_required: quizRequired,
+                });
                 lessonIndex++;
               });
             });
@@ -878,13 +909,17 @@ async function createCourse(req, res) {
                 console.error('[AdminController] Error creating lessons:', errLess.message);
                 return res.status(500).json({ message: 'Ошибка создания уроков' });
               }
-              let stepsDone = 0;
+              let opsDone = 0;
               const total = insertedLessons.length;
               if (total === 0) return res.status(201).json({ id, title, description: description || '', lessons: [], modules: modulesPayload });
               insertedLessons.forEach((l) => {
                 saveStepsForLesson(l.id, l.steps, () => {
-                  stepsDone++;
-                  if (stepsDone >= total) res.status(201).json({ id, title, description: description || '', lessons: insertedLessons, modules: modulesPayload });
+                  opsDone++;
+                  if (opsDone >= total * 2) res.status(201).json({ id, title, description: description || '', lessons: insertedLessons, modules: modulesPayload });
+                });
+                saveQuizForLesson(l.id, l.quiz_questions || [], () => {
+                  opsDone++;
+                  if (opsDone >= total * 2) res.status(201).json({ id, title, description: description || '', lessons: insertedLessons, modules: modulesPayload });
                 });
               });
             });
@@ -1093,9 +1128,10 @@ async function updateCourse(req, res) {
                   const orderIndex = typeof lesson.order_index === 'number' ? lesson.order_index : lessonIndex;
 
                   if (lesson.id && existingIds.has(lesson.id)) {
+                    const quizRequired = lesson.quiz_required === 0 || lesson.quiz_required === false ? 0 : 1;
                     db.run(
-                      `UPDATE course_lessons SET title = ?, content = ?, order_index = ?, module_id = ? WHERE id = ? AND course_id = ?`,
-                      [lesson.title, lesson.content || '', orderIndex, moduleId, lesson.id, courseId],
+                      `UPDATE course_lessons SET title = ?, content = ?, order_index = ?, module_id = ?, quiz_required = ? WHERE id = ? AND course_id = ?`,
+                      [lesson.title, lesson.content || '', orderIndex, moduleId, quizRequired, lesson.id, courseId],
                       function (upErr) {
                         if (upErr) console.error('[AdminController] Error updating lesson:', upErr.message);
                         saveQuizForLesson(lesson.id, lesson.quiz_questions || [], () => {
@@ -1108,9 +1144,10 @@ async function updateCourse(req, res) {
                     );
                   } else {
                     const newId = uuidv4();
+                    const quizRequired2 = lesson.quiz_required === 0 || lesson.quiz_required === false ? 0 : 1;
                     db.run(
-                      `INSERT INTO course_lessons (id, course_id, module_id, title, content, order_index) VALUES (?, ?, ?, ?, ?, ?)`,
-                      [newId, courseId, moduleId, lesson.title, lesson.content || '', orderIndex],
+                      `INSERT INTO course_lessons (id, course_id, module_id, title, content, order_index, quiz_required) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                      [newId, courseId, moduleId, lesson.title, lesson.content || '', orderIndex, quizRequired2],
                       (insErr) => {
                         if (insErr) console.error('[AdminController] Error inserting lesson:', insErr.message);
                         saveQuizForLesson(newId, lesson.quiz_questions || [], () => {
@@ -1592,6 +1629,78 @@ async function deleteUserController(req, res) {
   }
 }
 
+// ===== DEV TOOLS =====
+
+function devResetCourseProgress(req, res) {
+  const { id: courseId } = req.params;
+  const { email } = req.body || {};
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!courseId) return res.status(400).json({ message: 'courseId обязателен' });
+  if (!normalizedEmail) return res.status(400).json({ message: 'Передайте email пользователя' });
+
+  db.get('SELECT id, email FROM users WHERE lower(email) = ? LIMIT 1', [normalizedEmail], (errU, user) => {
+    if (errU) return res.status(500).json({ message: 'Ошибка сервера' });
+    if (!user?.id) return res.status(404).json({ message: 'Пользователь не найден' });
+
+    const userId = user.id;
+    const result = { deleted: { enrollments: 0, lesson_progress: 0, practical_submissions: 0, certificates: 0 } };
+
+    db.serialize(() => {
+      // Прогресс по урокам этого курса
+      db.run(
+        `
+          DELETE FROM course_lesson_progress
+          WHERE user_id = ?
+            AND lesson_id IN (SELECT id FROM course_lessons WHERE course_id = ?)
+        `,
+        [userId, courseId],
+        function (e1) {
+          if (e1) console.error('[AdminController] devReset lesson_progress:', e1.message);
+          result.deleted.lesson_progress = this?.changes || 0;
+        }
+      );
+
+      // Сданные практические шаги
+      db.run(
+        `DELETE FROM course_practical_submissions WHERE user_id = ? AND course_id = ?`,
+        [userId, courseId],
+        function (e2) {
+          if (e2) console.error('[AdminController] devReset practical_submissions:', e2.message);
+          result.deleted.practical_submissions = this?.changes || 0;
+        }
+      );
+
+      // Сертификаты
+      db.run(
+        `DELETE FROM course_certificates WHERE user_id = ? AND course_id = ?`,
+        [userId, courseId],
+        function (e3) {
+          if (e3) console.error('[AdminController] devReset certificates:', e3.message);
+          result.deleted.certificates = this?.changes || 0;
+        }
+      );
+
+      // Запись на курс
+      db.run(
+        `DELETE FROM course_enrollments WHERE user_id = ? AND course_id = ?`,
+        [userId, courseId],
+        function (e4) {
+          if (e4) console.error('[AdminController] devReset enrollments:', e4.message);
+          result.deleted.enrollments = this?.changes || 0;
+
+          // Финальный ответ отдаём после последнего шага
+          return res.status(200).json({
+            message: 'Прогресс по курсу сброшен',
+            user: { id: userId, email: user.email },
+            courseId,
+            ...result,
+          });
+        }
+      );
+    });
+  });
+}
+
 module.exports = {
   getStats,
   // Tasks
@@ -1622,6 +1731,8 @@ module.exports = {
   // Users
   getUsers,
   updateUserRole: updateUserRoleController,
-  deleteUser: deleteUserController
+  deleteUser: deleteUserController,
+  // Dev tools
+  devResetCourseProgress,
 };
 

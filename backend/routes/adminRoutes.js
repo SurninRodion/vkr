@@ -25,6 +25,7 @@ const {
   updateCourseCertificateTemplate,
   resetCourseCertificateTemplate,
   reissueCourseCertificates,
+  devResetCourseProgress,
   getUsers,
   updateUserRole,
   deleteUser
@@ -64,6 +65,7 @@ router.get('/courses/:id/certificate-template', getCourseCertificateTemplate);
 router.put('/courses/:id/certificate-template', updateCourseCertificateTemplate);
 router.post('/courses/:id/certificate-template/reset', resetCourseCertificateTemplate);
 router.post('/courses/:id/certificates/reissue', reissueCourseCertificates);
+router.post('/courses/:id/dev/reset-progress', devResetCourseProgress);
 router.post('/lessons/:lessonId/attachments', (req, res, next) => {
   uploadSingle(req.params.lessonId)(req, res, (err) => {
     if (err) return res.status(400).json({ message: err.message || 'Ошибка загрузки файла' });

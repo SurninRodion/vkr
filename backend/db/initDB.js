@@ -109,10 +109,24 @@ function seedCourseFromJsonFile(absPath, done) {
 
 function seedCourses() {
   try {
-    const seedPath = path.join(__dirname, 'seed', 'courses', 'prompt-engineering-basics.ru.json');
-    if (!fs.existsSync(seedPath)) return;
-    seedCourseFromJsonFile(seedPath, () => {
-      console.log('[DB] Seeded course:', 'Основы промпт-инжиниринга');
+    const seedDir = path.join(__dirname, 'seed', 'courses');
+    const seedFiles = [
+      {
+        file: 'prompt-engineering-basics.ru.json',
+        logTitle: 'Основы промпт-инжиниринга',
+      },
+      {
+        file: 'image-generation-basics.ru.json',
+        logTitle: 'Генерация изображений: быстрый старт',
+      },
+    ];
+
+    seedFiles.forEach(({ file, logTitle }) => {
+      const seedPath = path.join(seedDir, file);
+      if (!fs.existsSync(seedPath)) return;
+      seedCourseFromJsonFile(seedPath, () => {
+        console.log('[DB] Seeded course:', logTitle);
+      });
     });
   } catch (e) {
     console.error('[DB] Error seeding courses:', e.message);
@@ -622,6 +636,18 @@ function initDB() {
           console.error('[DB] Error adding module_id to course_lessons:', err.message);
         } else if (!err) {
           console.log('[DB] Added module_id column to course_lessons');
+        }
+      }
+    );
+
+    // Расширение course_lessons: закрепляющий тест обязателен/опционален (по умолчанию — обязателен)
+    db.run(
+      "ALTER TABLE course_lessons ADD COLUMN quiz_required INTEGER DEFAULT 1",
+      (err) => {
+        if (err && !/duplicate column name/i.test(err.message)) {
+          console.error('[DB] Error adding quiz_required to course_lessons:', err.message);
+        } else if (!err) {
+          console.log('[DB] Added quiz_required column to course_lessons');
         }
       }
     );

@@ -15,7 +15,7 @@ module.exports = {
   CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:5500',
 
   /** Base URL для ссылок в письмах (dev: http://localhost:5000) */
-  APP_BASE_URL: process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 5000}`,
+  APP_BASE_URL: process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 5001}`,
 
   /** SMTP (например Яндекс: smtp.yandex.ru:465, secure=true) */
   SMTP_HOST: process.env.SMTP_HOST || '',

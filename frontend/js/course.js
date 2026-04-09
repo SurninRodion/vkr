@@ -174,15 +174,47 @@ function renderLessonSteps(
     return block;
   }).join('');
   const isCompleted = completedSet.has(lesson.id);
-  const completeBtn = progress.enrolled && !isCompleted
+  const lessonHasQuiz = Array.isArray(lesson.quiz) && lesson.quiz.length > 0;
+  const quizRequired = Number(lesson.quiz_required ?? 1) === 1;
+  const quizBlock = lessonHasQuiz && progress.enrolled && !isCompleted
+    ? `
+      <div class="lesson-quiz-block" data-lesson-id="${escapeHtml(lesson.id)}" style="display:none;">
+        <div class="quiz-questions">
+          ${(lesson.quiz || []).map((q, qi) => `
+            <div class="quiz-q" data-q-index="${qi}">
+              <div class="quiz-q-text">${escapeHtml(q.question_text)}</div>
+              <div class="quiz-options">
+                ${(q.options || []).map((opt, oi) => `
+                  <label class="quiz-option-label">
+                    <input type="radio" name="quiz-${escapeHtml(lesson.id)}-${qi}" value="${oi}" />
+                    <span>${escapeHtml(opt)}</span>
+                  </label>
+                `).join('')}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="quiz-result" data-lesson-id="${escapeHtml(lesson.id)}" style="display:none;"></div>
+        <button type="button" class="btn btn-primary btn-sm quiz-submit" data-lesson-id="${escapeHtml(lesson.id)}">Отправить ответы</button>
+      </div>
+    `
+    : '';
+  const completeBtn = progress.enrolled && !isCompleted && (!lessonHasQuiz || !quizRequired)
     ? `<button type="button" class="btn btn-outline btn-sm lesson-complete lesson-complete-steps" data-lesson-id="${escapeHtml(lesson.id)}">Отметить урок пройденным</button>`
     : progress.enrolled && isCompleted
       ? '<span class="tag tag-green">Пройден</span>'
       : '';
+  const quizTriggerBtn = progress.enrolled && !isCompleted && lessonHasQuiz
+    ? `<button type="button" class="btn btn-outline btn-sm lesson-quiz-trigger" data-lesson-id="${escapeHtml(lesson.id)}">Пройти тест</button>`
+    : '';
   return `
     <div class="lesson-steps-container" data-lesson-id="${escapeHtml(lesson.id)}">
       ${stepsHtml}
-      <div class="lesson-steps-complete-row" style="margin-top:12px">${completeBtn}</div>
+      <div class="lesson-steps-complete-row" style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        ${quizTriggerBtn}
+        ${completeBtn}
+      </div>
+      ${quizBlock}
     </div>
   `;
 }
@@ -570,6 +602,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 )
                 .join('')}
             </div>
+            <div class="quiz-result" data-lesson-id="${escapeHtml(lesson.id)}" style="display:none;"></div>
             <button type="button" class="btn btn-primary btn-sm quiz-submit" data-lesson-id="${escapeHtml(lesson.id)}">Отправить ответы</button>
           </div>
         `
@@ -848,6 +881,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
               `).join('')}
             </div>
+            <div class="quiz-result" data-lesson-id="${escapeHtml(lesson.id)}" style="display:none;"></div>
             <button type="button" class="btn btn-primary btn-sm quiz-submit" data-lesson-id="${escapeHtml(lesson.id)}">Отправить ответы</button>
           </div>
         ` : '';
@@ -1005,6 +1039,41 @@ document.addEventListener('DOMContentLoaded', async () => {
           btn.disabled = true;
           try {
             const result = await apiSubmitQuiz(courseId, lessonId, answers);
+            const resultEl = block.querySelector(`.quiz-result[data-lesson-id="${lessonId}"]`);
+            const details = Array.isArray(result.details) ? result.details : [];
+            const scoreText = typeof result.score === 'number' ? `${result.score}%` : '—';
+            if (resultEl) {
+              const passedClass = result.passed ? 'quiz-result--passed' : 'quiz-result--failed';
+              resultEl.className = `quiz-result ${passedClass}`;
+              resultEl.style.display = 'block';
+              const resetBtn = result.passed
+                ? ''
+                : `<button type="button" class="btn btn-outline btn-sm quiz-reset" data-lesson-id="${escapeHtml(lessonId)}" style="margin-top:8px">Пройти ещё раз</button>`;
+              resultEl.innerHTML = `
+                <div class="quiz-result-text">Результат: <strong>${escapeHtml(scoreText)}</strong> правильных ответов.</div>
+                ${resetBtn}
+              `;
+            }
+
+            // Подсветка правильных/неправильных вариантов (после отправки).
+            questions.forEach((qEl, qIndex) => {
+              const d = details[qIndex];
+              if (!d) return;
+              const correctIndex = typeof d.correctIndex === 'number' ? d.correctIndex : -1;
+              const userAnswer = typeof d.userAnswer === 'number' ? d.userAnswer : -1;
+              const labels = qEl.querySelectorAll('.quiz-option-label');
+              labels.forEach((labelEl, optIndex) => {
+                labelEl.classList.remove('quiz-option-label--correct', 'quiz-option-label--wrong', 'quiz-option-label--chosen');
+                if (optIndex === userAnswer) labelEl.classList.add('quiz-option-label--chosen');
+                if (optIndex === correctIndex) labelEl.classList.add('quiz-option-label--correct');
+                if (optIndex === userAnswer && userAnswer !== correctIndex) labelEl.classList.add('quiz-option-label--wrong');
+              });
+              // При успешном прохождении блокируем изменение ответов.
+              if (result.passed) {
+                qEl.querySelectorAll('input[type="radio"]').forEach((r) => { r.disabled = true; });
+              }
+            });
+
             if (result.passed) {
               showToast(result.message || 'Тест пройден. Урок завершён.', 'success');
               markLessonComplete(lessonId);
@@ -1015,7 +1084,35 @@ document.addEventListener('DOMContentLoaded', async () => {
           } catch (e) { showToast(e.message || 'Ошибка отправки.', 'error'); btn.disabled = false; }
         });
       });
+      attachQuizResetListenersOnce();
       attachPracticalStepListenersOnce();
+    }
+
+    function attachQuizResetListenersOnce() {
+      if (root.dataset.quizResetBound === '1') return;
+      root.dataset.quizResetBound = '1';
+      root.addEventListener('click', (e) => {
+        const btn = e.target.closest('.quiz-reset');
+        if (!btn || !root.contains(btn)) return;
+        e.preventDefault();
+        const lessonId = btn.getAttribute('data-lesson-id');
+        const block = root.querySelector(`.lesson-quiz-block[data-lesson-id="${lessonId}"]`);
+        if (!block) return;
+        const resultEl = block.querySelector(`.quiz-result[data-lesson-id="${lessonId}"]`);
+        if (resultEl) {
+          resultEl.style.display = 'none';
+          resultEl.innerHTML = '';
+        }
+        block.querySelectorAll('.quiz-q').forEach((qEl) => {
+          qEl.querySelectorAll('.quiz-option-label').forEach((labelEl) => {
+            labelEl.classList.remove('quiz-option-label--correct', 'quiz-option-label--wrong', 'quiz-option-label--chosen');
+          });
+          qEl.querySelectorAll('input[type="radio"]').forEach((r) => {
+            r.disabled = false;
+            r.checked = false;
+          });
+        });
+      });
     }
 
     function attachPracticalStepListenersOnce() {

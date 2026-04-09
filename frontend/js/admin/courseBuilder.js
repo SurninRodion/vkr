@@ -50,6 +50,7 @@ async function uploadVideoForLesson(lessonId, file) {
 async function ensureAdminAccess() {
   try {
     const profile = await apiGetProfile();
+    state.profile = profile;
     if (!profile || profile.role !== 'admin') {
       showToast('Доступ разрешён только администраторам.', 'error');
       window.location.href = '/';
@@ -80,6 +81,8 @@ let state = {
   courses: [],
   currentCourse: null,
   pendingStep: null,
+  lessonQuizModal: null,
+  profile: null,
   /** Индекс модуля для модалки «Название модуля». */
   pendingModuleIndex: null,
   /** { mode: 'add'|'edit', modIndex: number, lessonIndex?: number } */
@@ -108,7 +111,9 @@ function getDefaultCertificateTemplateForDraft(courseTitle) {
 
             <div class="hero">
               <h1 class="title">Сертификат</h1>
-              <p class="subtitle">Подтверждает успешное прохождение курса</p>
+              <p class="subtitle">
+                Настоящим сертификатом подтверждается, что {{user_name}} успешно завершил обучение по курсу «{{course_title}}».
+              </p>
             </div>
 
             <div class="name">{{user_name}}</div>
@@ -315,6 +320,7 @@ function renderTree() {
         <div class="builder-course-actions">
           <button type="button" class="btn btn-ghost btn-sm" id="builder-edit-course">Редактировать курс</button>
           <button type="button" class="btn btn-ghost btn-sm" id="builder-edit-certificate">Сертификат</button>
+          ${course.id ? `<button type="button" class="btn btn-outline btn-sm" id="builder-dev-reset-progress">Dev: сбросить прогресс</button>` : ''}
           ${course.id ? `<button type="button" class="btn btn-ghost btn-sm btn-danger" id="builder-delete-course">Удалить курс</button>` : ''}
         </div>
       </div>
@@ -345,15 +351,18 @@ function renderTree() {
     (mod.lessons || []).forEach((lesson, lessonIndex) => {
       const lessonId = lesson.id || '';
       const lessonTitle = escapeHtml(lesson.title || 'Урок');
+      const quizCount = Array.isArray(lesson.quiz_questions) ? lesson.quiz_questions.length : 0;
+      const quizMeta = quizCount > 0 ? ` · Тест: ${quizCount}` : '';
       html += `
         <div class="builder-lesson" data-module-index="${modIndex}" data-lesson-index="${lessonIndex}" data-lesson-id="${lessonId}">
           <div class="builder-tree-node builder-tree-node--lesson">
             <span class="builder-tree-icon">📄</span>
-            <span class="builder-tree-label">${lessonTitle}</span>
+            <span class="builder-tree-label">${lessonTitle}${escapeHtml(quizMeta)}</span>
             <div class="builder-node-actions">
               <button type="button" class="btn btn-ghost btn-sm builder-edit-lesson" data-module-index="${modIndex}" data-lesson-index="${lessonIndex}">Изменить</button>
               <button type="button" class="btn btn-ghost btn-sm builder-delete-lesson" data-module-index="${modIndex}" data-lesson-index="${lessonIndex}">Удалить</button>
               <button type="button" class="btn btn-outline btn-sm builder-add-step" data-module-index="${modIndex}" data-lesson-index="${lessonIndex}">Добавить шаг</button>
+              <button type="button" class="btn btn-outline btn-sm builder-edit-lesson-quiz" data-module-index="${modIndex}" data-lesson-index="${lessonIndex}">Тест урока</button>
             </div>
           </div>
           <div class="builder-steps">
@@ -435,6 +444,7 @@ function attachTreeListeners() {
 
   root.querySelector('#builder-edit-course')?.addEventListener('click', () => openEditCourseModal());
   root.querySelector('#builder-edit-certificate')?.addEventListener('click', () => openCertificateModal());
+  root.querySelector('#builder-dev-reset-progress')?.addEventListener('click', () => devResetCourseProgressConfirm());
   root.querySelector('#builder-delete-course')?.addEventListener('click', () => deleteCourseConfirm());
   root.querySelector('#builder-add-module')?.addEventListener('click', () => addModule());
   root.querySelector('#builder-save-course')?.addEventListener('click', () => saveCourse());
@@ -479,6 +489,13 @@ function attachTreeListeners() {
       openAddStepModal(modIdx, lessonIdx);
     });
   });
+  root.querySelectorAll('.builder-edit-lesson-quiz').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const modIdx = parseInt(btn.getAttribute('data-module-index'), 10);
+      const lessonIdx = parseInt(btn.getAttribute('data-lesson-index'), 10);
+      openLessonQuizModal(modIdx, lessonIdx);
+    });
+  });
 
   root.querySelectorAll('.builder-edit-step').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -505,6 +522,96 @@ function attachTreeListeners() {
       moveStep(modIdx, lessonIdx, stepIdx, dir);
     });
   });
+
+  // Делегирование кликов внутри модалки "Тест урока"
+  const modalBody = document.getElementById('modal-step-form-body');
+  if (modalBody && modalBody.dataset.quizBound !== '1') {
+    modalBody.dataset.quizBound = '1';
+    modalBody.addEventListener('click', (e) => {
+      const addQ = e.target.closest('#quiz-q-add');
+      const add10 = e.target.closest('#quiz-q-add-10');
+      const delQ = e.target.closest('.quiz-q-del');
+      const addOpt = e.target.closest('.quiz-opt-add');
+      const delOpt = e.target.closest('.quiz-opt-del');
+
+      if (!addQ && !add10 && !delQ && !addOpt && !delOpt) return;
+      e.preventDefault();
+
+      const ctx = state.lessonQuizModal;
+      if (!ctx) return;
+      const modules = getModulesFromState();
+      const lesson = modules?.[ctx.modIndex]?.lessons?.[ctx.lessonIndex];
+      if (!lesson) return;
+      if (!Array.isArray(lesson.quiz_questions)) lesson.quiz_questions = [];
+
+      if (addQ || add10) {
+        const toAdd = add10 ? 10 : 1;
+        for (let i = 0; i < toAdd; i++) {
+          lesson.quiz_questions.push({
+            question_text: '',
+            options: ['Вариант 1', 'Вариант 2'],
+            correct_index: 0,
+          });
+        }
+        modalBody.innerHTML = renderLessonQuizEditor(lesson.quiz_questions);
+        return;
+      }
+
+      if (delQ) {
+        const qi = parseInt(delQ.getAttribute('data-qi'), 10);
+        if (!Number.isFinite(qi) || qi < 0) return;
+        lesson.quiz_questions.splice(qi, 1);
+        modalBody.innerHTML = renderLessonQuizEditor(lesson.quiz_questions);
+        return;
+      }
+
+      if (addOpt) {
+        const qi = parseInt(addOpt.getAttribute('data-qi'), 10);
+        const q = lesson.quiz_questions[qi];
+        if (!q) return;
+        if (!Array.isArray(q.options)) q.options = [];
+        q.options.push(`Вариант ${q.options.length + 1}`);
+        modalBody.innerHTML = renderLessonQuizEditor(lesson.quiz_questions);
+        return;
+      }
+
+      if (delOpt) {
+        const qi = parseInt(delOpt.getAttribute('data-qi'), 10);
+        const oi = parseInt(delOpt.getAttribute('data-oi'), 10);
+        const q = lesson.quiz_questions[qi];
+        if (!q || !Array.isArray(q.options)) return;
+        q.options.splice(oi, 1);
+        if (typeof q.correct_index !== 'number') q.correct_index = 0;
+        if (q.correct_index >= q.options.length) q.correct_index = Math.max(0, q.options.length - 1);
+        modalBody.innerHTML = renderLessonQuizEditor(lesson.quiz_questions);
+      }
+    });
+  }
+}
+
+async function devResetCourseProgressConfirm() {
+  const courseId = state.currentCourse?.id;
+  if (!courseId) return;
+  const defaultEmail = state.profile?.email ? String(state.profile.email) : '';
+  const email = prompt('Email пользователя, которому сбросить прогресс по этому курсу:', defaultEmail);
+  if (!email) return;
+  if (!confirm(`Сбросить прогресс по курсу для ${email}? Это удалит запись на курс, прогресс уроков, практику и сертификат.`)) return;
+  try {
+    const res = await fetch(`${ADMIN_API_BASE}/courses/${encodeURIComponent(courseId)}/dev/reset-progress`, {
+      method: 'POST',
+      headers: getAdminHeaders(),
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'Не удалось сбросить прогресс');
+    const d = data.deleted || {};
+    showToast(
+      `Прогресс сброшен. Уроки: ${d.lesson_progress ?? 0}, практика: ${d.practical_submissions ?? 0}, сертификаты: ${d.certificates ?? 0}, запись: ${d.enrollments ?? 0}.`,
+      'success'
+    );
+  } catch (e) {
+    showToast(e.message || 'Ошибка сброса прогресса', 'error');
+  }
 }
 
 function getCertificateModalEls() {
@@ -834,7 +941,9 @@ function applyEditLessonModal() {
       title,
       content,
       order_index: (mod.lessons || []).length,
-      steps: []
+      steps: [],
+      quiz_questions: [],
+      quiz_required: 1
     };
     if (!mod.lessons) mod.lessons = [];
     mod.lessons.push(newLesson);
@@ -1038,7 +1147,26 @@ function openStepFormForType(stepType, payload) {
     case 'test':
       const options = payload.options || ['', ''];
       const correctIndex = typeof payload.correct_index === 'number' ? payload.correct_index : 0;
+      const isLessonQuiz = !!payload.__lesson_quiz;
+      const quizRequired = payload.__quiz_required !== undefined ? !!payload.__quiz_required : true;
       bodyEl.innerHTML = `
+        <div class="form-field">
+          <label class="form-label" style="display:flex;gap:10px;align-items:center;">
+            <input type="checkbox" id="step-test-is-lesson-quiz" ${isLessonQuiz ? 'checked' : ''} />
+            Закрепляющий тест урока (несколько вопросов, результат в %)
+          </label>
+          <div class="muted" style="font-size:12px;margin-top:6px;">
+            Если включено — этот «шаг» сохранит тест в урок (как квиз) и он будет считаться процентами с подсветкой ответов.
+          </div>
+        </div>
+        <div class="form-field" id="step-lesson-quiz-required-wrap" style="${isLessonQuiz ? '' : 'display:none;'}">
+          <label class="form-label" style="display:flex;gap:10px;align-items:center;">
+            <input type="checkbox" id="step-lesson-quiz-required" ${quizRequired ? 'checked' : ''} />
+            Тест обязателен для завершения урока
+          </label>
+        </div>
+        <div class="form-field" id="step-lesson-quiz-editor-wrap" style="${isLessonQuiz ? '' : 'display:none;'}"></div>
+        <hr style="margin:12px 0; border:none; border-top:1px solid rgba(148,163,184,0.25);" />
         <div class="form-field">
           <label class="form-label">Вопрос</label>
           <input type="text" class="form-input" id="step-test-question" value="${escapeHtml(payload.question || '')}" />
@@ -1056,6 +1184,31 @@ function openStepFormForType(stepType, payload) {
           <button type="button" class="btn btn-ghost btn-sm" id="step-test-add-opt">Добавить вариант</button>
         </div>
       `;
+
+      (function bindLessonQuizToggle() {
+        const cb = bodyEl.querySelector('#step-test-is-lesson-quiz');
+        const reqWrap = bodyEl.querySelector('#step-lesson-quiz-required-wrap');
+        const quizWrap = bodyEl.querySelector('#step-lesson-quiz-editor-wrap');
+        if (!cb || !reqWrap || !quizWrap) return;
+        const ensureEditor = () => {
+          if (!state.pendingStep) return;
+          const { modIndex, lessonIndex } = state.pendingStep;
+          const modules = getModulesFromState();
+          const lesson = modules?.[modIndex]?.lessons?.[lessonIndex];
+          if (!lesson) return;
+          if (!Array.isArray(lesson.quiz_questions)) lesson.quiz_questions = [];
+          quizWrap.innerHTML = renderLessonQuizEditor(lesson.quiz_questions);
+        };
+        const apply = () => {
+          const on = cb.checked;
+          reqWrap.style.display = on ? '' : 'none';
+          quizWrap.style.display = on ? '' : 'none';
+          if (on) ensureEditor();
+        };
+        cb.addEventListener('change', apply);
+        apply();
+      })();
+
       bodyEl.querySelector('#step-test-add-opt')?.addEventListener('click', () => {
         const container = bodyEl.querySelector('#step-test-options');
         const idx = container.querySelectorAll('.step-test-opt').length;
@@ -1105,6 +1258,12 @@ function collectStepPayload(stepType) {
         description: bodyEl.querySelector('#step-video-desc')?.value?.trim() || ''
       };
     case 'test': {
+      const isLessonQuiz = !!bodyEl.querySelector('#step-test-is-lesson-quiz')?.checked;
+      if (isLessonQuiz) {
+        // Для закрепляющего теста: payload шага не используем, данные сохраняем в lesson.quiz_questions
+        // и отметку обязательности — в lesson.quiz_required.
+        return { __lesson_quiz: true };
+      }
       const question = bodyEl.querySelector('#step-test-question')?.value?.trim() || '';
       const optInputs = bodyEl.querySelectorAll('.step-test-opt');
       const options = Array.from(optInputs).map((inp) => inp.value.trim()).filter(Boolean);
@@ -1127,7 +1286,98 @@ function collectStepPayload(stepType) {
   }
 }
 
+function openLessonQuizModal(modIndex, lessonIndex) {
+  const modules = getModulesFromState();
+  const lesson = modules?.[modIndex]?.lessons?.[lessonIndex];
+  if (!lesson) return;
+  if (!Array.isArray(lesson.quiz_questions)) lesson.quiz_questions = [];
+  state.lessonQuizModal = { modIndex, lessonIndex };
+  const bodyEl = document.getElementById('modal-step-form-body');
+  const titleEl = document.getElementById('modal-step-form-title');
+  if (!bodyEl) return;
+  if (titleEl) titleEl.textContent = 'Тест урока (закрепляющий)';
+  bodyEl.innerHTML = renderLessonQuizEditor(lesson.quiz_questions);
+  document.getElementById('modal-step-form')?.classList.add('backdrop--visible');
+}
+
+function renderLessonQuizEditor(questions) {
+  const safe = Array.isArray(questions) ? questions : [];
+  const qHtml = safe.map((q, qi) => {
+    const opts = Array.isArray(q.options) ? q.options : [];
+    const correct = typeof q.correct_index === 'number' ? q.correct_index : 0;
+    return `
+      <div class="card" style="padding:12px; margin-bottom:10px" data-quiz-q="${qi}">
+        <div class="form-field">
+          <label class="form-label">Вопрос ${qi + 1}</label>
+          <input type="text" class="form-input quiz-q-text" value="${escapeHtml(q.question_text || '')}" placeholder="Текст вопроса" />
+        </div>
+        <div class="form-field">
+          <label class="form-label">Варианты (минимум 2). Отметьте правильный.</label>
+          <div class="quiz-q-options">
+            ${opts.map((opt, oi) => `
+              <div style="display:flex; gap:10px; align-items:center; margin-bottom:6px" data-quiz-opt="${oi}">
+                <input type="radio" name="quiz-correct-${qi}" value="${oi}" ${oi === correct ? 'checked' : ''} />
+                <input type="text" class="form-input quiz-opt-text" value="${escapeHtml(opt)}" placeholder="Вариант ${oi + 1}" />
+                <button type="button" class="btn btn-ghost btn-sm quiz-opt-del" data-qi="${qi}" data-oi="${oi}">Удалить</button>
+              </div>
+            `).join('')}
+          </div>
+          <button type="button" class="btn btn-outline btn-sm quiz-opt-add" data-qi="${qi}">Добавить вариант</button>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <button type="button" class="btn btn-ghost btn-sm quiz-q-del" data-qi="${qi}">Удалить вопрос</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div id="lesson-quiz-editor">
+      <p class="muted" style="margin-top:0;">
+        Это закрепляющий тест урока. Он проходится в конце урока и считается в процентах.
+      </p>
+      ${qHtml || '<p class="muted">Вопросов пока нет.</p>'}
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <button type="button" class="btn btn-outline" id="quiz-q-add">Добавить вопрос</button>
+        <button type="button" class="btn btn-outline" id="quiz-q-add-10">Добавить шаблон на 10 вопросов</button>
+      </div>
+    </div>
+  `;
+}
+
+function collectLessonQuizFromModal() {
+  const bodyEl = document.getElementById('modal-step-form-body');
+  if (!bodyEl) return [];
+  const qCards = bodyEl.querySelectorAll('[data-quiz-q]');
+  const result = [];
+  qCards.forEach((card, qi) => {
+    const question_text = card.querySelector('.quiz-q-text')?.value?.trim() || '';
+    const optInputs = card.querySelectorAll('.quiz-opt-text');
+    const options = Array.from(optInputs).map((inp) => inp.value.trim()).filter(Boolean);
+    const correctRadio = card.querySelector(`input[name="quiz-correct-${qi}"]:checked`);
+    const correct_index = correctRadio ? parseInt(correctRadio.value, 10) : 0;
+    if (!question_text) return;
+    if (options.length < 2) return;
+    result.push({ question_text, options, correct_index });
+  });
+  return result;
+}
+
 function saveStepFromModal() {
+  if (state.lessonQuizModal) {
+    const ctx = state.lessonQuizModal;
+    const modules = getModulesFromState();
+    const lesson = modules?.[ctx.modIndex]?.lessons?.[ctx.lessonIndex];
+    if (!lesson) return;
+    const questions = collectLessonQuizFromModal();
+    lesson.quiz_questions = questions;
+    state.lessonQuizModal = null;
+    document.getElementById('modal-step-form')?.classList.remove('backdrop--visible');
+    renderTree();
+    showToast('Тест урока сохранён.', 'success');
+    return;
+  }
+
   const pending = state.pendingStep;
   if (!pending) return;
   const stepType = pending.step?.step_type || state.selectedStepType;
@@ -1140,6 +1390,20 @@ function saveStepFromModal() {
   const lesson = mod?.lessons?.[pending.lessonIndex];
   if (!lesson) return;
   if (!lesson.steps) lesson.steps = [];
+
+  // Особый случай: через "Добавить шаг → Тест" создаём закрепляющий тест урока (quiz_questions).
+  if (stepType === 'test' && payload && payload.__lesson_quiz) {
+    if (!Array.isArray(lesson.quiz_questions)) lesson.quiz_questions = [];
+    const requiredCb = document.getElementById('modal-step-form-body')?.querySelector('#step-lesson-quiz-required');
+    lesson.quiz_required = requiredCb && requiredCb.checked ? 1 : 0;
+    // Ничего не добавляем в lesson.steps — это именно тест урока.
+    document.getElementById('modal-step-form')?.classList.remove('backdrop--visible');
+    state.pendingStep = null;
+    state.selectedStepType = null;
+    renderTree();
+    showToast('Тест урока сохранён.', 'success');
+    return;
+  }
 
   const orderIndex = pending.stepIndex >= 0 ? pending.stepIndex : lesson.steps.length;
   if (pending.stepIndex >= 0) {
@@ -1206,6 +1470,8 @@ async function saveCourse() {
         title: les.title || '',
         content: les.content || '',
         order_index: li,
+        quiz_required: typeof les.quiz_required === 'number' ? les.quiz_required : (les.quiz_required ? 1 : 0),
+        quiz_questions: Array.isArray(les.quiz_questions) ? les.quiz_questions : [],
         steps: (les.steps || []).map((s, si) => ({
           id: s.id || undefined,
           step_type: s.step_type,
@@ -1335,6 +1601,7 @@ document.getElementById('modal-step-form')?.querySelectorAll('[data-modal-close]
     document.getElementById('modal-step-form').classList.remove('backdrop--visible');
     state.pendingStep = null;
     state.selectedStepType = null;
+    state.lessonQuizModal = null;
   });
 });
 

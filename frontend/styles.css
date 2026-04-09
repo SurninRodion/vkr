@@ -1920,10 +1920,48 @@ a.card.home-task-card:focus-visible {
   gap: 8px;
   font-size: 13px;
   cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid transparent;
 }
 
 .quiz-option-label input {
   flex-shrink: 0;
+}
+
+.quiz-option-label--chosen {
+  border-color: rgba(148, 163, 184, 0.55);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.quiz-option-label--correct {
+  border-color: rgba(16, 185, 129, 0.55);
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.quiz-option-label--wrong {
+  border-color: rgba(185, 28, 28, 0.5);
+  background: rgba(185, 28, 28, 0.10);
+}
+
+.quiz-result {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.quiz-result--passed {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.10);
+}
+
+.quiz-result--failed {
+  border-color: rgba(185, 28, 28, 0.25);
+  background: rgba(185, 28, 28, 0.08);
 }
 
 .quiz-submit {
@@ -2655,6 +2693,80 @@ a.card.home-task-card:focus-visible {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+/* =========
+   Admin course builder: responsive quiz editor inside modal
+   ========= */
+
+#modal-step-form .modal {
+  max-width: min(720px, 96vw);
+  width: min(720px, 96vw);
+  max-height: min(92vh, 920px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#modal-step-form .modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#modal-step-form .modal-actions {
+  flex-wrap: wrap;
+}
+
+#modal-step-form .modal-body .card {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+#modal-step-form #lesson-quiz-editor {
+  max-width: 100%;
+}
+
+#modal-step-form [data-quiz-q] {
+  max-width: 100%;
+}
+
+/* Option rows: keep within viewport */
+#modal-step-form .quiz-q-options > div {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+#modal-step-form .quiz-q-options input[type="radio"] {
+  flex: 0 0 auto;
+}
+
+#modal-step-form .quiz-q-options .quiz-opt-text {
+  flex: 1 1 260px;
+  min-width: min(260px, 100%);
+}
+
+#modal-step-form .quiz-q-options .quiz-opt-del {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  #modal-step-form .modal {
+    padding: 14px 14px 12px;
+    border-radius: 16px;
+  }
+  #modal-step-form .modal-title {
+    font-size: 15px;
+  }
+  #modal-step-form .quiz-q-options .quiz-opt-text {
+    flex-basis: 100%;
+    min-width: 100%;
+  }
 }
 
 /* =========
