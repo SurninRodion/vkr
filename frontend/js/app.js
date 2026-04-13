@@ -1,6 +1,7 @@
 import { initNavbar, initGuestProtectedButtons } from './ui.js';
 import { getAuthState } from './auth.js';
 import { apiGetProgress } from './api.js';
+import { initSessionManager } from './session.js';
 
 function firstNameFromUser(user) {
   const raw = (user?.name || '').trim();
@@ -45,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initNavbar();
   initGuestProtectedButtons();
   initHomeHero();
+  initSessionManager();
 
   if (document.getElementById('progress-courses-bar')) {
     initHomeProgress();

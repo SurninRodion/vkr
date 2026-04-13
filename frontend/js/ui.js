@@ -403,3 +403,71 @@ export function animateProgressBar(barEl, labelEl, value) {
   labelEl.textContent = `${normalized}%`;
 }
 
+function ensureSessionModal() {
+  let modal = document.getElementById('session-timeout-modal');
+  if (modal) return modal;
+
+  modal = document.createElement('div');
+  modal.className = 'backdrop';
+  modal.id = 'session-timeout-modal';
+  modal.setAttribute('aria-hidden', 'true');
+  modal.innerHTML = `
+    <div class="modal">
+      <h3 class="modal-title">Сессия истекает</h3>
+      <p class="modal-body">
+        Вы долго не проявляли активность. Сессия будет завершена через <b id="session-countdown">--</b> сек.
+      </p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" data-session-logout>Выйти</button>
+        <button class="btn btn-primary" type="button" data-session-extend>Продолжить работу</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  return modal;
+}
+
+/**
+ * Открывает модальное окно с предупреждением об истечении сессии.
+ */
+export function openSessionWarningModal({ onExtend, onLogout, timeoutMs }) {
+  const modal = ensureSessionModal();
+  const countdownEl = modal.querySelector('#session-countdown');
+  const extendBtn = modal.querySelector('[data-session-extend]');
+  const logoutBtn = modal.querySelector('[data-session-logout]');
+
+  let remaining = Math.max(0, Math.floor(timeoutMs / 1000));
+  if (countdownEl) countdownEl.textContent = remaining;
+
+  const interval = setInterval(() => {
+    remaining--;
+    if (remaining <= 0) {
+      clearInterval(interval);
+    } else {
+      if (countdownEl) countdownEl.textContent = remaining;
+    }
+  }, 1000);
+
+  const close = () => {
+    clearInterval(interval);
+    modal.classList.remove('backdrop--visible');
+    modal.setAttribute('aria-hidden', 'true');
+  };
+
+  extendBtn.onclick = () => {
+    close();
+    if (onExtend) onExtend();
+  };
+
+  logoutBtn.onclick = () => {
+    close();
+    if (onLogout) onLogout();
+  };
+
+  // Не закрывать при клике на фон для этого модального окна — нужно действие
+  modal.classList.add('backdrop--visible');
+  modal.setAttribute('aria-hidden', 'false');
+
+  return modal;
+}
+
