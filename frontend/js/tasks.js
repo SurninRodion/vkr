@@ -109,4 +109,3 @@ document.addEventListener('DOMContentLoaded', async () => {
       '<p class="muted">Не удалось загрузить задания. Обновите страницу позже.</p>';
   }
 });
-

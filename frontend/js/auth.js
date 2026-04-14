@@ -94,7 +94,6 @@ export async function register(payload) {
   }
 }
 
-// Attach form handlers when on auth pages
 document.addEventListener('DOMContentLoaded', () => {
   const loginForm = document.getElementById('login-form');
   if (loginForm) {
@@ -161,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
       url.searchParams.delete('resetToken');
       window.history.replaceState({}, '', url.toString());
     } catch {
-      // ignore
+      
     }
   }
 
@@ -206,4 +205,3 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
-

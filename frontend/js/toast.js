@@ -1,4 +1,3 @@
-/** Отдельный модуль без зависимостей от auth/ui — избегает циклического импорта auth ↔ ui. */
 export function showToast(message, type = 'success') {
   const container = document.getElementById('toast-container');
   if (!container) return;

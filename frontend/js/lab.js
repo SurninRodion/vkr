@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
       const result = taskId ? await apiSubmitTaskSolution(taskId, value) : await apiSubmitPrompt(value);
-      // Результат генерации (объяснение, план урока и т.д.) или комментарий оценки
+      
       const mainText = result.response || 'Нет ответа от модели.';
       if (!result.generatedContent && result.analysisComment) {
         outputEl.textContent = 'Ответ нейросети по промпту не получен (возможен лимит запросов). Показана только оценка промпта.\n\n' + mainText;
@@ -180,5 +180,3 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 });
-
-

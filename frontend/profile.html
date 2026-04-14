@@ -1,174 +1,149 @@
 <!doctype html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <script src="./js/auth-head.js"></script>
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <title>Профиль — Prompt Academy</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link
-      rel="preconnect"
-      href="https://fonts.googleapis.com"
-    />
-    <link
-      rel="preconnect"
-      href="https://fonts.gstatic.com"
-      crossorigin
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      rel="stylesheet"
-      href="./styles.css"
-    />
-  </head>
-  <body class="page">
-    <header class="navbar">
-      <div class="container navbar-inner">
-        <div class="navbar-left">
-          <a href="/" class="logo">
-            <div class="logo-mark" aria-hidden="true"></div>
-            <span class="logo-text"><span class="logo-name">Prompt</span> <span class="logo-name logo-name--academy">Academy</span></span>
-          </a>
-          <nav class="navbar-menu">
-            <a href="/courses" class="nav-link" data-nav="courses">Курсы</a>
-            <a href="/practice" class="nav-link" data-nav="practice">Практика</a>
-            <a href="/library" class="nav-link" data-nav="library">Библиотека</a>
-            <a href="/leaderboard" class="nav-link" data-nav="leaderboard">Рейтинг</a>
-          </nav>
-        </div>
-        <div class="navbar-right" id="navbar-right">
-          <div class="navbar-auth-guest">
-            <button class="btn btn-ghost" data-action="open-login">Профиль</button>
-            <button class="btn btn-primary" data-action="open-login">Войти</button>
-          </div>
-          <div class="navbar-auth-user"></div>
-        </div>
-      </div>
-    </header>
-    <script>window.promptNavbarUserHydrate && window.promptNavbarUserHydrate()</script>
 
-    <main class="layout-main">
-      <section class="container">
-        <div class="page-header">
-          <div>
-            <h1 class="page-title">Личный кабинет</h1>
-            <p class="page-header-meta">
-              Настройте профиль, следите за прогрессом и уровнем владения промпт-инжинирингом.
-            </p>
-          </div>
-        </div>
+<head>
+  <meta charset="UTF-8" />
+  <script src="./js/auth-head.js"></script>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <title>Профиль — Prompt Academy</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
 
-        <div class="profile-layout" id="profile-root">
-          <!-- Skeleton while loading -->
-          <div class="profile-main">
-            <div class="profile-header">
-              <div class="profile-avatar skeleton"></div>
-              <div style="flex: 1">
-                <div class="skeleton skeleton-line" style="width: 60%"></div>
-                <div
-                  class="skeleton skeleton-line"
-                  style="width: 40%; margin-top: 6px"
-                ></div>
-              </div>
-            </div>
-            <div class="stat-row">
-              <span class="stat-label">Решённые задания</span>
-              <span class="stat-value">
-                <span class="skeleton skeleton-line" style="width: 40px"></span>
-              </span>
-            </div>
-            <div class="stat-row">
-              <span class="stat-label">Средняя оценка промптов</span>
-              <span class="stat-value">
-                <span class="skeleton skeleton-line" style="width: 60px"></span>
-              </span>
-            </div>
-            <div class="stat-row">
-              <span class="stat-label">Уровень</span>
-              <span class="stat-value">
-                <span class="skeleton skeleton-line" style="width: 80px"></span>
-              </span>
-            </div>
-          </div>
-          <aside class="profile-side profile-side--skeleton">
-            <div class="profile-level-card">
-              <div class="profile-level-card-inner">
-                <div class="skeleton profile-skeleton-icon"></div>
-                <div style="flex: 1">
-                  <div class="skeleton skeleton-line" style="width: 42%; height: 10px; margin-bottom: 8px"></div>
-                  <div class="skeleton skeleton-line" style="width: 55%; height: 18px"></div>
-                </div>
-              </div>
-            </div>
-            <div class="profile-side-section">
-              <div class="skeleton skeleton-line" style="width: 48%; margin-bottom: 10px"></div>
-              <div class="skeleton skeleton-line" style="width: 100%; margin-bottom: 8px"></div>
-              <div class="skeleton skeleton-line" style="width: 100%; margin-bottom: 8px"></div>
-              <div class="skeleton skeleton-line" style="width: 100%; height: 40px; border-radius: 12px"></div>
-            </div>
-          </aside>
-        </div>
-      </section>
-    </main>
-
-    <footer class="site-footer">
-      <div class="container footer-inner">
-        <div class="footer-brand">
-          <a href="/" class="logo">
-            <div class="logo-mark" aria-hidden="true"></div>
-            <span class="logo-text"><span class="logo-name">Prompt</span> <span class="logo-name logo-name--academy">Academy</span></span>
-          </a>
-          <p class="footer-tagline">Платформа обучения промпт-инжинирингу</p>
-        </div>
-        <nav class="footer-nav">
-          <a href="/courses">Курсы</a>
-          <a href="/practice">Практика</a>
-          <a href="/library">Библиотека</a>
-          <a href="/leaderboard">Рейтинг</a>
+<body class="page">
+  <header class="navbar">
+    <div class="container navbar-inner">
+      <div class="navbar-left">
+        <a href="/" class="logo">
+          <div class="logo-mark" aria-hidden="true"></div>
+          <span class="logo-text"><span class="logo-name">Prompt</span> <span
+              class="logo-name logo-name--academy">Academy</span></span>
+        </a>
+        <nav class="navbar-menu">
+          <a href="/courses" class="nav-link" data-nav="courses">Курсы</a>
+          <a href="/practice" class="nav-link" data-nav="practice">Практика</a>
+          <a href="/library" class="nav-link" data-nav="library">Библиотека</a>
+          <a href="/leaderboard" class="nav-link" data-nav="leaderboard">Рейтинг</a>
         </nav>
-        <div class="footer-bottom">
-          <span class="footer-copy">© 2026 Prompt Academy</span>
-        </div>
       </div>
-    </footer>
-
-    <div
-      class="backdrop"
-      id="auth-modal"
-      aria-hidden="true"
-    >
-      <div class="modal">
-        <h3 class="modal-title">Профиль доступен после входа</h3>
-        <p class="modal-body">
-          Войдите в аккаунт, чтобы увидеть ваши достижения, уровень и историю практики.
-        </p>
-        <div class="modal-actions">
-          <button
-            class="btn btn-ghost"
-            data-modal-close
-          >
-            Позже
-          </button>
-          <a
-            href="/login"
-            class="btn btn-primary"
-          >
-            Войти
-          </a>
+      <div class="navbar-right" id="navbar-right">
+        <div class="navbar-auth-guest">
+          <button class="btn btn-ghost" data-action="open-login">Профиль</button>
+          <button class="btn btn-primary" data-action="open-login">Войти</button>
         </div>
+        <div class="navbar-auth-user"></div>
       </div>
     </div>
+  </header>
+  <script>window.promptNavbarUserHydrate && window.promptNavbarUserHydrate()</script>
 
-    <div
-      class="toast-container"
-      id="toast-container"
-    ></div>
+  <main class="layout-main">
+    <section class="container">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Личный кабинет</h1>
+          <p class="page-header-meta">
+            Настройте профиль, следите за прогрессом и уровнем владения промпт-инжинирингом.
+          </p>
+        </div>
+      </div>
 
-    <script type="module" src="./js/app.js"></script>
-    <script type="module" src="./js/profile.js"></script>
-  </body>
+      <div class="profile-layout" id="profile-root">
+        
+        <div class="profile-main">
+          <div class="profile-header">
+            <div class="profile-avatar skeleton"></div>
+            <div style="flex: 1">
+              <div class="skeleton skeleton-line" style="width: 60%"></div>
+              <div class="skeleton skeleton-line" style="width: 40%; margin-top: 6px"></div>
+            </div>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Решённые задания</span>
+            <span class="stat-value">
+              <span class="skeleton skeleton-line" style="width: 40px"></span>
+            </span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Средняя оценка промптов</span>
+            <span class="stat-value">
+              <span class="skeleton skeleton-line" style="width: 60px"></span>
+            </span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Уровень</span>
+            <span class="stat-value">
+              <span class="skeleton skeleton-line" style="width: 80px"></span>
+            </span>
+          </div>
+        </div>
+        <aside class="profile-side profile-side--skeleton">
+          <div class="profile-level-card">
+            <div class="profile-level-card-inner">
+              <div class="skeleton profile-skeleton-icon"></div>
+              <div style="flex: 1">
+                <div class="skeleton skeleton-line" style="width: 42%; height: 10px; margin-bottom: 8px"></div>
+                <div class="skeleton skeleton-line" style="width: 55%; height: 18px"></div>
+              </div>
+            </div>
+          </div>
+          <div class="profile-side-section">
+            <div class="skeleton skeleton-line" style="width: 48%; margin-bottom: 10px"></div>
+            <div class="skeleton skeleton-line" style="width: 100%; margin-bottom: 8px"></div>
+            <div class="skeleton skeleton-line" style="width: 100%; margin-bottom: 8px"></div>
+            <div class="skeleton skeleton-line" style="width: 100%; height: 40px; border-radius: 12px"></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <a href="/" class="logo">
+          <div class="logo-mark" aria-hidden="true"></div>
+          <span class="logo-text"><span class="logo-name">Prompt</span> <span
+              class="logo-name logo-name--academy">Academy</span></span>
+        </a>
+        <p class="footer-tagline">Платформа обучения промпт-инжинирингу</p>
+      </div>
+      <nav class="footer-nav">
+        <a href="/courses">Курсы</a>
+        <a href="/practice">Практика</a>
+        <a href="/library">Библиотека</a>
+        <a href="/leaderboard">Рейтинг</a>
+      </nav>
+      <div class="footer-bottom">
+        <span class="footer-copy">© 2026 Prompt Academy</span>
+      </div>
+    </div>
+  </footer>
+
+  <div class="backdrop" id="auth-modal" aria-hidden="true">
+    <div class="modal">
+      <h3 class="modal-title">Профиль доступен после входа</h3>
+      <p class="modal-body">
+        Войдите в аккаунт, чтобы увидеть ваши достижения, уровень и историю практики.
+      </p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" data-modal-close>
+          Позже
+        </button>
+        <a href="/login" class="btn btn-primary">
+          Войти
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script type="module" src="./js/app.js"></script>
+  <script type="module" src="./js/profile.js"></script>
+</body>
+
 </html>
-

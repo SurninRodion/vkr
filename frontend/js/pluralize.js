@@ -1,8 +1,3 @@
-/**
- * Склонение существительных после числа (рус.).
- * @param {number} n
- * @param {[string, string, string]} forms — [1, 2–4, 5–20 и т.д.]
- */
 export function pluralRu(n, forms) {
   const [one, few, many] = forms;
   const abs = Math.abs(Number(n)) | 0;

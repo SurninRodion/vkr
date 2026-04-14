@@ -4,7 +4,6 @@ const ADMIN_API_BASE = '/api/admin';
 
 const KNOWN_TASK_TYPES = new Set(['improvement', 'lesson', 'optimization', 'generic', 'generated']);
 
-/** Полный список заданий с сервера (для фильтрации на клиенте). */
 let allTasksCache = [];
 
 function getAdminHeaders() {
@@ -18,7 +17,7 @@ function getAdminHeaders() {
       headers.Authorization = `Bearer ${parsed.token}`;
     }
   } catch {
-    // ignore parse errors
+    
   }
 
   return headers;

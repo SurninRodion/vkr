@@ -36,10 +36,8 @@ const router = express.Router();
 
 router.use(authMiddleware, adminMiddleware);
 
-// Статистика
 router.get('/stats', getStats);
 
-// Задания
 router.get('/tasks', getTasks);
 router.post('/tasks', createTask);
 router.put('/tasks/:id', updateTask);
@@ -47,16 +45,13 @@ router.delete('/tasks/:id', deleteTask);
 router.post('/import/tasks', importTasks);
 router.post('/import/prompts', importPrompts);
 
-// Генерация заданий ИИ
 router.post('/tasks/generate-ai', generateTasksAI);
 
-// Библиотека промптов
 router.get('/prompts', getPrompts);
 router.post('/prompts', createPrompt);
 router.put('/prompts/:id', updatePrompt);
 router.delete('/prompts/:id', deletePrompt);
 
-// Курсы
 router.get('/courses', getCourses);
 router.post('/courses', createCourse);
 router.put('/courses/:id', updateCourse);
@@ -81,10 +76,8 @@ router.post('/lessons/:lessonId/videos', (req, res, next) => {
 }, uploadLessonVideo);
 router.delete('/attachments/:id', deleteAttachment);
 
-// Пользователи
 router.get('/users', getUsers);
 router.put('/users/:id', updateUserRole);
 router.delete('/users/:id', deleteUser);
 
 module.exports = router;
-

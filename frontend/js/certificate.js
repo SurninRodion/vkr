@@ -97,4 +97,3 @@ document.addEventListener('DOMContentLoaded', async () => {
     showToast(status.textContent, 'error');
   }
 });
-

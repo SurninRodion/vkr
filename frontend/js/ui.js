@@ -12,7 +12,7 @@ function ensureMobileNavbarScaffold() {
   if (!navbarInner || !navbarMenu || !navbarRight) return null;
 
   if (document.querySelector('.navbar-burger')) {
-    // Уже инициализировано
+    
     const mobile = document.getElementById('navbar-mobile');
     return { mobilePanel: mobile };
   }
@@ -243,12 +243,10 @@ export function initNavbar() {
   });
 }
 
-// Обновлять навбар при смене состояния авторизации
 window.addEventListener('auth:change', () => {
   initNavbar();
 });
 
-/** На страницах с `.auth-gate-wrap` — стеклянная заглушка для гостя; без обёртки — no-op, возвращает `true`. */
 export function initAuthGate() {
   const wrap = document.querySelector('.auth-gate-wrap');
   if (!wrap) return true;
@@ -333,15 +331,11 @@ export function openEmailVerifyModal({ title, body } = {}) {
   return modal;
 }
 
-/**
- * Ограничение для залогиненных пользователей без подтверждённого email.
- * Используйте на страницах, которые должны быть доступны только после верификации.
- */
 export function requireVerifiedEmailOrRedirect({
   toastMessage = 'Подтвердите email, чтобы открыть этот раздел.',
 } = {}) {
   const { isAuthenticated, user } = getAuthState();
-  if (!isAuthenticated) return true; // гость обрабатывается initAuthGate()
+  if (!isAuthenticated) return true; 
   if (user?.emailVerified) return true;
 
   openEmailVerifyModal({
@@ -427,9 +421,6 @@ function ensureSessionModal() {
   return modal;
 }
 
-/**
- * Открывает модальное окно с предупреждением об истечении сессии.
- */
 export function openSessionWarningModal({ onExtend, onLogout, timeoutMs }) {
   const modal = ensureSessionModal();
   const countdownEl = modal.querySelector('#session-countdown');
@@ -464,10 +455,8 @@ export function openSessionWarningModal({ onExtend, onLogout, timeoutMs }) {
     if (onLogout) onLogout();
   };
 
-  // Не закрывать при клике на фон для этого модального окна — нужно действие
   modal.classList.add('backdrop--visible');
   modal.setAttribute('aria-hidden', 'false');
 
   return modal;
 }
-

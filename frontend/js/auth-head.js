@@ -1,7 +1,3 @@
-/**
- * Синхронно в <head>, до первой отрисовки: data-auth + критический CSS в <head>.
- * Внешний styles.css подключается позже — без этого гость/ЛК на кадр «мигают».
- */
 (function () {
   var v = '0';
   try {
@@ -30,9 +26,6 @@
   document.head.appendChild(el);
 })();
 
-/**
- * Вызывается инлайн сразу после </header>: меню ЛК до DOMContentLoaded (см. ui.js initNavbar).
- */
 (function () {
   function readAuth() {
     try {

@@ -13,7 +13,7 @@ function createEmailVerificationToken({ userId, ttlMinutes = 60 * 24 }) {
 
   return new Promise((resolve, reject) => {
     db.serialize(() => {
-      // Удаляем старые неиспользованные токены пользователя, чтобы не плодить мусор
+      
       db.run(
         `
           DELETE FROM email_verification_tokens
@@ -82,7 +82,6 @@ function consumeEmailVerificationToken({ token }) {
           const now = nowRow?.now;
           if (!now) return reject(new Error('Не удалось получить текущее время'));
 
-          // SQLite datetime строки сравнимы лексикографически в ISO-формате
           if (now > row.expires_at) return resolve({ ok: false, reason: 'expired' });
 
           db.run(
@@ -106,4 +105,3 @@ module.exports = {
   createEmailVerificationToken,
   consumeEmailVerificationToken,
 };
-

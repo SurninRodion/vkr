@@ -9,7 +9,6 @@ function escapeHtml(s) {
   return div.innerHTML;
 }
 
-/** Краткий текст для карточки списка (полное описание остаётся на странице курса). */
 function courseCardPreview(text, maxLen = 220) {
   const t = (text || '').trim();
   if (!t) return '';

@@ -43,7 +43,7 @@ function updateStoredEmailVerified(value) {
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(parsed));
     window.dispatchEvent(new CustomEvent('auth:change', { detail: parsed }));
   } catch {
-    // ignore
+    
   }
 }
 
@@ -300,7 +300,6 @@ function renderProfile(root, profile, myCourses = []) {
   const saveBtn = root.querySelector('#profile-save-btn');
   const resendBtn = root.querySelector('#resend-verification-btn');
 
-  // Сертификаты: модалка просмотра
   ensureCertificateModal();
   root.querySelectorAll('[data-cert-open]').forEach((btn) => {
     btn.addEventListener('click', async () => {
@@ -545,14 +544,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
       }
 
-      // очистим query-параметры, чтобы при обновлении страницы не повторять запрос
       try {
         const url = new URL(window.location.href);
         url.searchParams.delete('verifyToken');
         url.searchParams.delete('needsEmailVerify');
         window.history.replaceState({}, '', url.toString());
       } catch {
-        // ignore
+        
       }
     }
 
@@ -569,4 +567,3 @@ document.addEventListener('DOMContentLoaded', async () => {
       '<p class="muted">Не удалось загрузить профиль. Попробуйте обновить страницу позже.</p>';
   }
 });
-

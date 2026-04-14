@@ -16,7 +16,7 @@ function getAdminHeaders() {
       headers.Authorization = `Bearer ${parsed.token}`;
     }
   } catch {
-    // ignore parse errors, return headers without auth
+    
   }
 
   return headers;
@@ -206,4 +206,3 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 });
-

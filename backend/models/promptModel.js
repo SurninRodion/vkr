@@ -22,4 +22,3 @@ function createPrompt({ id, user_id, prompt_text, ai_response, analysis }) {
 module.exports = {
   createPrompt
 };
-

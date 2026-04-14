@@ -1,7 +1,3 @@
-/**
- * Удаляет все практические задания и результаты их выполнения.
- * Запуск: node ./db/clearTasks.js (из папки backend)
- */
 require('dotenv').config();
 const db = require('./db');
 

@@ -8,4 +8,3 @@ const router = express.Router();
 router.post('/analyze', authMiddleware, requireVerifiedEmail, analyze);
 
 module.exports = router;
-

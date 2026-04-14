@@ -100,10 +100,6 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/**
- * Выполняет промпт пользователя через GigaChat и возвращает сгенерированный текст
- * (например, план урока, список и т.д.). При 429 повторяет запрос один раз через 4 с.
- */
 async function generateFromPrompt(prompt) {
   if (!GIGACHAT_CREDENTIALS || !prompt || !prompt.trim()) return null;
 

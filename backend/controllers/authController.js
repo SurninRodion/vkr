@@ -284,7 +284,6 @@ async function forgotPassword(req, res) {
       });
     }
 
-    // Всегда одинаковый ответ, чтобы не выдавать существование email
     return res.json({ message: 'Если такой email зарегистрирован, мы отправили письмо со ссылкой.' });
   } catch (err) {
     console.error('[AuthController] Forgot password error:', err.message);
@@ -334,4 +333,3 @@ module.exports = {
   forgotPassword,
   resetPassword
 };
-

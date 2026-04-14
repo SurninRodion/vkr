@@ -58,4 +58,3 @@ window.addEventListener('auth:change', () => {
     initHomeHero();
   }
 });
-

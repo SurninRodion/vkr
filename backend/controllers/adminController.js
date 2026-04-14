@@ -216,8 +216,6 @@ function defaultCertificateTemplate(courseTitle) {
   };
 }
 
-// ===== STATS =====
-
 async function getStats(req, res) {
   try {
     const totals = await new Promise((resolve, reject) => {
@@ -251,8 +249,6 @@ async function getStats(req, res) {
     return res.status(500).json({ message: 'Ошибка получения статистики' });
   }
 }
-
-// ===== TASKS CRUD =====
 
 async function getTasks(req, res) {
   try {
@@ -409,8 +405,6 @@ async function importTasks(req, res) {
   }
 }
 
-// ===== AI TASK GENERATION =====
-
 async function generateTasksAI(req, res) {
   try {
     const { topic, count = 3, difficulty = 'medium' } = req.body || {};
@@ -421,8 +415,6 @@ async function generateTasksAI(req, res) {
 
     const safeCount = Math.max(1, Math.min(10, Number(count) || 3));
 
-    // Пытаемся использовать внешний AI (через общий анализатор),
-    // но даже без него вернём эвристически сгенерированные задания.
     await analyzePrompt(
       `Сгенерируй ${safeCount} практических задания по теме "${topic}" уровня сложности "${difficulty}".`
     );
@@ -447,8 +439,6 @@ async function generateTasksAI(req, res) {
     return res.status(500).json({ message: 'Ошибка генерации заданий ИИ' });
   }
 }
-
-// ===== PROMPT LIBRARY =====
 
 async function getPrompts(req, res) {
   try {
@@ -630,8 +620,6 @@ async function importPrompts(req, res) {
     return res.status(500).json({ message: 'Ошибка импорта промптов' });
   }
 }
-
-// ===== COURSES =====
 
 function loadAttachmentsAndQuizForLessons(lessonIds, cb) {
   if (!lessonIds.length) return cb(null, { attachments: {}, quiz: {} });
@@ -849,8 +837,6 @@ async function createCourse(req, res) {
           return res.status(500).json({ message: 'Ошибка создания курса' });
         }
 
-        // Для каждого нового курса заранее сохраняем дефолтный шаблон сертификата,
-        // чтобы затем менялись только переменные (название курса/пользователь/дата/серийный номер).
         try {
           const def = defaultCertificateTemplate(title);
           db.run(
@@ -1409,8 +1395,6 @@ async function deleteAttachment(req, res) {
   }
 }
 
-// ===== COURSE CERTIFICATE TEMPLATES =====
-
 function getCourseCertificateTemplate(req, res) {
   const { id: courseId } = req.params;
   db.get('SELECT id, title FROM courses WHERE id = ?', [courseId], (errC, course) => {
@@ -1517,7 +1501,7 @@ function renderCertificateHtml({ template_html, template_css }, meta) {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${safe.course_title} — сертификат</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https:
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
     <style>${String(template_css || '')}</style>
@@ -1741,4 +1725,3 @@ module.exports = {
   // Dev tools
   devResetCourseProgress,
 };
-

@@ -86,4 +86,3 @@ function checkAndIncrement({ scope, key, limit, windowMs }) {
 module.exports = {
   checkAndIncrement,
 };
-

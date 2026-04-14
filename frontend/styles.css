@@ -1,7 +1,3 @@
-/* =========
-   Design tokens
-   ========= */
-
 :root {
   --color-primary: #4f46e5;
   --color-secondary: #6366f1;
@@ -68,10 +64,6 @@ button {
   margin: 0 auto;
   padding: 0 20px;
 }
-
-/* =========
-   Navbar
-   ========= */
 
 .navbar {
   position: fixed;
@@ -153,7 +145,6 @@ button {
   overflow: visible;
 }
 
-/* Хвостик речевого пузыря (промпт → ответ) */
 .logo-mark::before {
   content: '';
   position: absolute;
@@ -167,7 +158,6 @@ button {
   filter: drop-shadow(0 2px 4px rgba(79, 70, 229, 0.25));
 }
 
-/* Символ приглашения ввода промпта */
 .logo-mark::after {
   content: '>';
   position: absolute;
@@ -235,26 +225,28 @@ button {
   gap: 10px;
 }
 
-/* data-auth выставляет auth-head.js до отрисовки — без мигания кнопок навбара */
 html[data-auth="1"] .navbar-auth-guest {
   display: none !important;
 }
+
 html[data-auth="0"] .navbar-auth-user {
   display: none !important;
 }
 
-/* Главная: герой гостя / ЛК без переключения hidden в JS */
 html:not([data-auth]) #hero-dashboard,
 html[data-auth="0"] #hero-dashboard {
   display: none !important;
 }
+
 html:not([data-auth]) #hero-guest,
 html[data-auth="0"] #hero-guest {
   display: block !important;
 }
+
 html[data-auth="1"] #hero-guest {
   display: none !important;
 }
+
 html[data-auth="1"] #hero-dashboard {
   display: block !important;
 }
@@ -388,7 +380,7 @@ html[data-auth="1"] #hero-dashboard {
   position: relative;
   z-index: 80;
   transition: background var(--transition-fast), box-shadow var(--transition-fast),
-  border-color var(--transition-fast), transform var(--transition-fast);
+    border-color var(--transition-fast), transform var(--transition-fast);
 }
 
 .navbar-burger span {
@@ -483,10 +475,6 @@ html[data-auth="1"] #hero-dashboard {
   padding-top: 88px;
   padding-bottom: 40px;
 }
-
-/* =========
-   Hero
-   ========= */
 
 .hero {
   padding: 40px 0 32px;
@@ -704,7 +692,6 @@ html[data-auth="1"] #hero-dashboard {
   font-size: 13px;
 }
 
-/* Home: авторизованный пользователь — вместо маркетингового hero */
 .hero--dashboard {
   padding: 36px 0 28px;
 }
@@ -887,10 +874,6 @@ html[data-auth="1"] #hero-dashboard {
   }
 }
 
-/* =========
-   Sections / cards
-   ========= */
-
 .section {
   margin-top: 8px;
 }
@@ -990,34 +973,33 @@ html[data-auth="1"] #hero-dashboard {
   gap: 10px;
 }
 
-/* Главная: одинаковая высота карточек, ровные блоки */
-.section--home-features .card-grid--home > .card,
-.section--home-tasks .card-grid--home > .card {
+.section--home-features .card-grid--home>.card,
+.section--home-tasks .card-grid--home>.card {
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
 }
 
-.section--home-features .card-grid--home > .card .card-header {
+.section--home-features .card-grid--home>.card .card-header {
   flex-shrink: 0;
   min-height: 38px;
   align-items: flex-start;
 }
 
-.section--home-features .card-grid--home > .card .card-title {
+.section--home-features .card-grid--home>.card .card-title {
   flex-shrink: 0;
   margin-bottom: 6px;
   line-height: 1.35;
 }
 
-.section--home-features .card-grid--home > .card .card-description {
+.section--home-features .card-grid--home>.card .card-description {
   flex: 1 1 auto;
   margin: 0;
   line-height: 1.5;
 }
 
-.section--home-features .card-grid--home > .card .card-footer {
+.section--home-features .card-grid--home>.card .card-footer {
   margin-top: auto;
   padding-top: 14px;
   border-top: 1px solid rgba(148, 163, 184, 0.14);
@@ -1025,16 +1007,16 @@ html[data-auth="1"] #hero-dashboard {
   align-items: center;
 }
 
-.section--home-features .card-grid--home > .card .card-footer .muted {
+.section--home-features .card-grid--home>.card .card-footer .muted {
   white-space: nowrap;
   flex-shrink: 0;
 }
 
-.section--home-features .card-grid--home > .card .card-footer .badge-soft {
+.section--home-features .card-grid--home>.card .card-footer .badge-soft {
   flex-shrink: 0;
 }
 
-.section--home-tasks .card-grid--home > .card .card-title {
+.section--home-tasks .card-grid--home>.card .card-title {
   flex-shrink: 0;
   margin-bottom: 6px;
   line-height: 1.35;
@@ -1045,13 +1027,13 @@ html[data-auth="1"] #hero-dashboard {
   overflow: hidden;
 }
 
-.section--home-tasks .card-grid--home > .card .card-description {
+.section--home-tasks .card-grid--home>.card .card-description {
   flex: 1 1 auto;
   margin: 0;
   line-height: 1.5;
 }
 
-.section--home-tasks .card-grid--home > .card .task-card-meta {
+.section--home-tasks .card-grid--home>.card .task-card-meta {
   margin-top: auto;
   padding-top: 14px;
   border-top: 1px solid rgba(148, 163, 184, 0.14);
@@ -1061,7 +1043,7 @@ html[data-auth="1"] #hero-dashboard {
   gap: 10px 12px;
 }
 
-.section--home-tasks .card-grid--home > .card .task-card-meta > .task-meta {
+.section--home-tasks .card-grid--home>.card .task-card-meta>.task-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1070,37 +1052,36 @@ html[data-auth="1"] #hero-dashboard {
   min-width: 0;
 }
 
-.section--home-tasks .card-grid--home > .card .task-card-meta .btn {
+.section--home-tasks .card-grid--home>.card .task-card-meta .btn {
   flex: 0 0 auto;
   align-self: center;
 }
 
 @media (max-width: 520px) {
-  .section--home-tasks .card-grid--home > .card .task-card-meta {
+  .section--home-tasks .card-grid--home>.card .task-card-meta {
     flex-wrap: wrap;
   }
 
-  .section--home-tasks .card-grid--home > .card .task-card-meta .btn {
+  .section--home-tasks .card-grid--home>.card .task-card-meta .btn {
     width: 100%;
     justify-content: center;
   }
 }
 
-/* Практика и библиотека: карточки с ровной сеткой как на главной */
-.card-grid--balanced > .card {
+.card-grid--balanced>.card {
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
 }
 
-.card-grid--balanced > .card .card-header {
+.card-grid--balanced>.card .card-header {
   flex-shrink: 0;
   min-height: 38px;
   align-items: flex-start;
 }
 
-.card-grid--balanced > .card .card-title {
+.card-grid--balanced>.card .card-title {
   flex-shrink: 0;
   margin-bottom: 6px;
   line-height: 1.35;
@@ -1111,20 +1092,20 @@ html[data-auth="1"] #hero-dashboard {
   overflow: hidden;
 }
 
-.card-grid--balanced > .card .card-title.skeleton-line {
+.card-grid--balanced>.card .card-title.skeleton-line {
   min-height: unset;
   display: block;
   -webkit-line-clamp: unset;
   overflow: visible;
 }
 
-.card-grid--balanced > .card .card-description {
+.card-grid--balanced>.card .card-description {
   flex: 1 1 auto;
   margin: 0;
   line-height: 1.5;
 }
 
-.card-grid--balanced > .card .task-card-meta {
+.card-grid--balanced>.card .task-card-meta {
   margin-top: auto;
   padding-top: 14px;
   border-top: 1px solid rgba(148, 163, 184, 0.14);
@@ -1134,7 +1115,7 @@ html[data-auth="1"] #hero-dashboard {
   gap: 10px 12px;
 }
 
-.card-grid--balanced > .card .task-card-meta > .task-meta {
+.card-grid--balanced>.card .task-card-meta>.task-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1143,12 +1124,12 @@ html[data-auth="1"] #hero-dashboard {
   min-width: 0;
 }
 
-.card-grid--balanced > .card .task-card-meta .btn {
+.card-grid--balanced>.card .task-card-meta .btn {
   flex: 0 0 auto;
   align-self: center;
 }
 
-.card-grid--balanced > .card .card-footer {
+.card-grid--balanced>.card .card-footer {
   margin-top: auto;
   margin-bottom: 0;
   padding-top: 14px;
@@ -1158,38 +1139,37 @@ html[data-auth="1"] #hero-dashboard {
   gap: 10px 12px;
 }
 
-.card-grid--balanced > .card .card-footer .badge-soft {
+.card-grid--balanced>.card .card-footer .badge-soft {
   flex-shrink: 0;
 }
 
-.card-grid--balanced > .card .library-card-actions {
+.card-grid--balanced>.card .library-card-actions {
   flex: 1 1 auto;
   min-width: 0;
   justify-content: flex-end;
 }
 
 @media (max-width: 520px) {
-  .card-grid--balanced > .card .task-card-meta {
+  .card-grid--balanced>.card .task-card-meta {
     flex-wrap: wrap;
   }
 
-  .card-grid--balanced > .card .task-card-meta .btn {
+  .card-grid--balanced>.card .task-card-meta .btn {
     width: 100%;
     justify-content: center;
   }
 
-  .card-grid--balanced > .card .library-card-actions {
+  .card-grid--balanced>.card .library-card-actions {
     width: 100%;
     justify-content: stretch;
   }
 
-  .card-grid--balanced > .card .library-card-actions .btn {
+  .card-grid--balanced>.card .library-card-actions .btn {
     flex: 1 1 auto;
     justify-content: center;
   }
 }
 
-/* Карточки-ссылки на главной */
 a.card.home-feature-card,
 a.card.home-task-card {
   text-decoration: none;
@@ -1208,7 +1188,7 @@ a.card.home-task-card:focus-visible {
   user-select: none;
 }
 
-.section--home-tasks .card-grid--home > .card .home-task-card-cta {
+.section--home-tasks .card-grid--home>.card .home-task-card-cta {
   pointer-events: none;
   user-select: none;
 }
@@ -1227,8 +1207,6 @@ a.card.home-task-card:focus-visible {
   color: var(--color-muted);
 }
 
-/* Popular tasks */
-
 .task-meta {
   display: inline-flex;
   align-items: center;
@@ -1238,10 +1216,6 @@ a.card.home-task-card:focus-visible {
   line-height: 1.25;
   color: var(--color-muted);
 }
-
-/* =========
-   Leaderboard / Progress
-   ========= */
 
 .split-grid {
   display: grid;
@@ -1527,23 +1501,27 @@ a.card.home-task-card:focus-visible {
   text-decoration: none !important;
 }
 
-/* Course program sidebar: styled scrollbar */
 .course-nav-sidebar {
-  scrollbar-width: thin; /* Firefox */
+  scrollbar-width: thin;
+  
   scrollbar-color: rgba(79, 70, 229, 0.45) rgba(15, 23, 42, 0.06);
 }
+
 .course-nav-sidebar::-webkit-scrollbar {
   width: 10px;
 }
+
 .course-nav-sidebar::-webkit-scrollbar-track {
   background: rgba(15, 23, 42, 0.06);
   border-radius: 999px;
 }
+
 .course-nav-sidebar::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, rgba(79, 70, 229, 0.55), rgba(99, 102, 241, 0.35));
   border-radius: 999px;
   border: 2px solid rgba(245, 247, 251, 0.9);
 }
+
 .course-nav-sidebar::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, rgba(79, 70, 229, 0.75), rgba(99, 102, 241, 0.55));
 }
@@ -1563,7 +1541,7 @@ a.card.home-task-card:focus-visible {
   margin-bottom: 12px;
 }
 
-.course-overview-module > ul {
+.course-overview-module>ul {
   list-style: none;
   margin: 4px 0 0 16px;
   padding: 0;
@@ -1981,10 +1959,6 @@ a.card.home-task-card:focus-visible {
   margin-right: 6px;
 }
 
-/* =========
-   Practice / Lab / Profile / Leaderboard shared
-   ========= */
-
 .page-header {
   display: flex;
   align-items: baseline;
@@ -2097,7 +2071,7 @@ a.card.home-task-card:focus-visible {
   flex-wrap: wrap;
 }
 
-.task-card-meta > .task-meta {
+.task-card-meta>.task-meta {
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -2111,8 +2085,6 @@ a.card.home-task-card:focus-visible {
   display: inline-flex;
   align-items: center;
 }
-
-/* Lab */
 
 .lab-grid {
   display: grid;
@@ -2262,8 +2234,6 @@ a.card.home-task-card:focus-visible {
   color: #dc2626;
 }
 
-/* Leaderboard page */
-
 .leaderboard-card {
   background: var(--color-card);
   border-radius: var(--radius-lg);
@@ -2272,15 +2242,12 @@ a.card.home-task-card:focus-visible {
   border: 1px solid rgba(148, 163, 184, 0.16);
 }
 
-/* Profile */
-
 .profile-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
   gap: 20px;
 }
 
-/* На странице курса боковая панель не используется — контент на всю ширину */
 #course-root .profile-layout--course {
   grid-template-columns: 1fr;
 }
@@ -2543,8 +2510,6 @@ a.card.home-task-card:focus-visible {
   flex-shrink: 0;
 }
 
-/* Auth pages */
-
 .auth-wrapper {
   min-height: 100vh;
   display: flex;
@@ -2638,10 +2603,6 @@ a.card.home-task-card:focus-visible {
   color: #4f46e5;
 }
 
-/* =========
-   Modals, overlays, loaders
-   ========= */
-
 .backdrop {
   position: fixed;
   inset: 0;
@@ -2695,10 +2656,6 @@ a.card.home-task-card:focus-visible {
   gap: 8px;
 }
 
-/* =========
-   Admin course builder: responsive quiz editor inside modal
-   ========= */
-
 #modal-step-form .modal {
   max-width: min(720px, 96vw);
   width: min(720px, 96vw);
@@ -2732,8 +2689,7 @@ a.card.home-task-card:focus-visible {
   max-width: 100%;
 }
 
-/* Option rows: keep within viewport */
-#modal-step-form .quiz-q-options > div {
+#modal-step-form .quiz-q-options>div {
   display: flex;
   gap: 10px;
   align-items: center;
@@ -2760,18 +2716,16 @@ a.card.home-task-card:focus-visible {
     padding: 14px 14px 12px;
     border-radius: 16px;
   }
+
   #modal-step-form .modal-title {
     font-size: 15px;
   }
+
   #modal-step-form .quiz-q-options .quiz-opt-text {
     flex-basis: 100%;
     min-width: 100%;
   }
 }
-
-/* =========
-   Auth gate (glass stub for guests — контент скрыт, данные не грузим)
-   ========= */
 
 .auth-gate-wrap {
   position: relative;
@@ -2795,12 +2749,10 @@ a.card.home-task-card:focus-visible {
   justify-content: center;
   padding: 28px 20px;
   border-radius: var(--radius-lg);
-  background: linear-gradient(
-    145deg,
-    rgba(238, 242, 255, 0.45) 0%,
-    rgba(245, 247, 251, 0.65) 50%,
-    rgba(224, 231, 255, 0.4) 100%
-  );
+  background: linear-gradient(145deg,
+      rgba(238, 242, 255, 0.45) 0%,
+      rgba(245, 247, 251, 0.65) 50%,
+      rgba(224, 231, 255, 0.4) 100%);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(148, 163, 184, 0.22);
@@ -2931,6 +2883,7 @@ a.card.home-task-card:focus-visible {
     opacity: 0;
     transform: translateY(6px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -2962,12 +2915,14 @@ a.card.home-task-card:focus-visible {
 }
 
 @keyframes dot {
+
   0%,
   80%,
   100% {
     transform: scale(0.6);
     opacity: 0.3;
   }
+
   40% {
     transform: scale(1);
     opacity: 1;
@@ -2977,12 +2932,10 @@ a.card.home-task-card:focus-visible {
 .skeleton {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(
-    90deg,
-    rgba(226, 232, 240, 0.9),
-    rgba(248, 250, 252, 0.9),
-    rgba(226, 232, 240, 0.9)
-  );
+  background: linear-gradient(90deg,
+      rgba(226, 232, 240, 0.9),
+      rgba(248, 250, 252, 0.9),
+      rgba(226, 232, 240, 0.9));
   background-size: 200% 100%;
   animation: skeleton-loading 1.2s infinite;
 }
@@ -2991,6 +2944,7 @@ a.card.home-task-card:focus-visible {
   0% {
     background-position: 200% 0;
   }
+
   100% {
     background-position: -200% 0;
   }
@@ -3006,8 +2960,6 @@ a.card.home-task-card:focus-visible {
   margin-bottom: 0;
 }
 
-/* Utility */
-
 .muted {
   color: var(--color-muted);
 }
@@ -3020,10 +2972,6 @@ a.card.home-task-card:focus-visible {
   opacity: 0.6;
   pointer-events: none;
 }
-
-/* =========
-   Admin layout
-   ========= */
 
 .admin-layout {
   display: grid;
@@ -3308,7 +3256,6 @@ a.card.home-task-card:focus-visible {
   text-align: right;
 }
 
-/* Таблица пользователей: компактная вёрстка без горизонтального скролла */
 .admin-tasks-scroll.admin-users-scroll {
   overflow-x: visible;
 }
@@ -3566,10 +3513,6 @@ a.card.home-task-card:focus-visible {
   }
 }
 
-/* =========
-   Responsive
-   ========= */
-
 @media (max-width: 960px) {
   .hero-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -3690,10 +3633,6 @@ a.card.home-task-card:focus-visible {
   }
 }
 
-/* =========
-   Footer
-   ========= */
-
 .site-footer {
   margin-top: auto;
   background: rgba(245, 247, 251, 0.9);
@@ -3776,10 +3715,6 @@ a.card.home-task-card:focus-visible {
     margin-top: 4px;
   }
 }
-
-/* =========
-   Course builder (constructor)
-   ========= */
 
 .builder-toolbar {
   margin-bottom: 20px;
@@ -4002,4 +3937,3 @@ a.card.home-task-card:focus-visible {
   background: rgba(15, 23, 42, 0.04);
   border: 1px solid rgba(15, 23, 42, 0.08);
 }
-

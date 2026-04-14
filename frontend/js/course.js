@@ -22,7 +22,6 @@ function nl2br(s) {
   return String(s ?? '').replace(/\n/g, '<br>');
 }
 
-/** Закрепляющий тест урока из таблицы course_quiz_questions (поле lesson.quiz в API). */
 function lessonHasLegacyQuiz(lesson) {
   return Array.isArray(lesson?.quiz) && lesson.quiz.length > 0;
 }
@@ -81,7 +80,6 @@ function buildPracticalMap(progress) {
   return m;
 }
 
-/** Панель с сохранённым ответом и результатом проверки GigaChat (как метрики в «Практике»). */
 function renderPracticalFeedbackPanel(saved) {
   if (!saved || !saved.submissionText) return '';
   const a = saved.analysis || {};
@@ -128,7 +126,7 @@ function renderStepBlock(step, stepIndex, lessonId, courseId, practicalSaved, pr
           ? `https://www.youtube.com/embed/${ytBeMatch[1]}`
           : url;
       const isFileVideo =
-        /^\/uploads\//i.test(url) ||
+        /^\/uploads\
         /\.(mp4|webm|ogg|mov|m4v)(\?|#|$)/i.test(url);
       inner = `
         <h4 class="lesson-step-title">${escapeHtml(p.title || 'Видео')}</h4>
@@ -366,7 +364,6 @@ function truncateNavLabel(s, max = 40) {
   return `${t.slice(0, max - 1)}…`;
 }
 
-/** Упорядоченные «узлы» курса: шаг урока или урок без шагов. */
 function buildCourseSequenceNodes(lessonsListFull) {
   const nodes = [];
   lessonsListFull.forEach((entry) => {
@@ -419,11 +416,6 @@ function findSequenceIndex(nodes, lessonId, stepId) {
   return nodes.findIndex((n) => n.lessonId === lessonId);
 }
 
-/**
- * Навигация «назад / вперёд» по программе курса в конце карточки урока.
- * @param activeLessonId — текущий урок из URL (пусто: список нескольких уроков на странице).
- * @param activeStepId — текущий шаг из URL.
- */
 function renderLessonNavRow(courseId, lessonsListFull, itemLessonId, activeLessonId, activeStepId) {
   const nodes = buildCourseSequenceNodes(lessonsListFull);
   if (!nodes.length) return '';
@@ -575,7 +567,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       return ordered.find((id) => !completedSet.has(id)) || ordered[0] || '';
     }
 
-    // Гейт: пока пользователь НЕ записан на курс — показываем только обзор.
     if (!progress.enrolled) {
       viewModuleId = '';
       viewLessonId = '';
@@ -784,7 +775,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       </div>
     `;
 
-    // Sidebar should match content window height; overflow scrolls inside.
     syncProgramSidebarHeight();
     window.addEventListener('resize', () => syncProgramSidebarHeight());
     applySequentialLocksToProgram();
@@ -844,13 +834,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function updateContentView(moduleId, lessonId, stepId, replace) {
-      // Гейт (не записан) — всегда только обзор
+      
       if (!progress.enrolled) {
         moduleId = '';
         lessonId = '';
         stepId = '';
       } else if (lessonId && !allowedLessonIds.has(lessonId)) {
-        // Последовательное открытие: редиректим на ближайший доступный урок
+        
         const nextAllowed = pickNextAllowedLessonId();
         moduleId = '';
         lessonId = nextAllowed || '';

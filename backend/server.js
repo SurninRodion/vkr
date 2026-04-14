@@ -17,7 +17,6 @@ const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 
-// Basic request logging
 app.use((req, res, next) => {
   console.log(`[Request] ${req.method} ${req.url}`);
   next();
@@ -28,19 +27,16 @@ app.use(express.json());
 
 const frontendPath = path.join(__dirname, '..', 'frontend');
 
-// Вход в админку — сразу сводка (Dashboard), без промежуточной страницы admin/index.html
 app.get(['/admin', '/admin/'], (req, res) => {
   res.redirect(302, '/admin/dashboard');
 });
 
-// Обратная совместимость: старые письма вели на /verify-email?token=...
 app.get(['/verify-email', '/verify-email/'], (req, res) => {
   const token = (req.query.token || '').toString();
   if (!token) return res.redirect(302, '/profile?needsEmailVerify=1');
   return res.redirect(302, `/profile?verifyToken=${encodeURIComponent(token)}`);
 });
 
-// 301: /page.html -> /page, /index.html и */index.html -> без «index» и без .html
 function redirectHtmlToCleanUrl(req, res, next) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
   if (!req.path.endsWith('.html')) return next();
@@ -54,7 +50,6 @@ function redirectHtmlToCleanUrl(req, res, next) {
   return res.redirect(301, clean + qs);
 }
 
-// GET /courses -> courses.html, GET / -> index.html; /admin редирект на /admin/dashboard (см. выше)
 function serveExtensionlessHtml(req, res, next) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
   if (req.path.startsWith('/api/') || req.path.startsWith('/uploads')) return next();
@@ -83,20 +78,16 @@ function serveExtensionlessHtml(req, res, next) {
 app.use(redirectHtmlToCleanUrl);
 app.use(serveExtensionlessHtml);
 
-// Статика фронтенда (CSS, JS, изображения)
 app.use(express.static(frontendPath));
 
-// Загруженные файлы курсов (изображения, документы)
 const uploadsPath = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsPath)) fs.mkdirSync(uploadsPath, { recursive: true });
 app.use('/uploads', express.static(uploadsPath));
 
-// Health-check API
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'PromptLearn backend is running' });
 });
 
-// API роуты
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/prompts', promptRoutes);
@@ -106,7 +97,6 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/library', libraryRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Global error handler (fallback)
 app.use((err, req, res, next) => {
   console.error('[Server] Unhandled error:', err);
   res.status(500).json({ message: 'Внутренняя ошибка сервера' });
@@ -117,4 +107,3 @@ initDB();
 app.listen(PORT, () => {
   console.log(`PromptLearn backend listening on http://localhost:${PORT}`);
 });
-

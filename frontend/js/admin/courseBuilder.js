@@ -82,16 +82,16 @@ let state = {
   currentCourse: null,
   pendingStep: null,
   profile: null,
-  /** Индекс модуля для модалки «Название модуля». */
+  
   pendingModuleIndex: null,
-  /** { mode: 'add'|'edit', modIndex: number, lessonIndex?: number } */
+  
   lessonModal: null,
   certificateTemplate: null,
   certificateDraft: null,
 };
 
 function getDefaultCertificateTemplateForDraft(courseTitle) {
-  // Должно соответствовать дефолту на бэкенде (примерно), чтобы черновик не был пустым.
+  
   return {
     enabled: true,
     title: `Сертификат: ${courseTitle || 'Курс'}`,
@@ -624,7 +624,7 @@ function buildCertificatePreviewDoc({ templateHtml, templateCss }, { userName, c
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https:
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
   <style>${String(templateCss || '')}</style>

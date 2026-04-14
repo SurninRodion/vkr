@@ -13,7 +13,6 @@ async function analyze(req, res) {
       return res.status(400).json({ message: 'prompt обязателен' });
     }
 
-    // Анализ и генерация только через GigaChat (нейросеть)
     const analysis = await analyzePrompt(prompt);
     if (!analysis || typeof analysis.effectiveness !== 'number') {
       return res.status(503).json({
@@ -48,4 +47,3 @@ async function analyze(req, res) {
 module.exports = {
   analyze
 };
-

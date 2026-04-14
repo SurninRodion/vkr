@@ -11,4 +11,3 @@ function requireVerifiedEmail(req, res, next) {
 }
 
 module.exports = requireVerifiedEmail;
-

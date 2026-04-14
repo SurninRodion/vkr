@@ -14,4 +14,3 @@ async function getTopUsers(req, res) {
 module.exports = {
   getTopUsers
 };
-

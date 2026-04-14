@@ -54,7 +54,6 @@ async function submitSolution(req, res) {
       return res.status(404).json({ message: 'Задание не найдено' });
     }
 
-    // Анализ и генерация только через GigaChat (нейросеть)
     const analysis = await analyzePrompt(prompt);
     if (!analysis || typeof analysis.effectiveness !== 'number') {
       return res.status(503).json({
@@ -154,4 +153,3 @@ module.exports = {
   getTaskResult,
   getCompletedTaskIdsHandler
 };
-

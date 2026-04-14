@@ -35,7 +35,7 @@ function uploadSingle(lessonId) {
 function uploadVideoSingle(lessonId) {
   return multer({
     storage: getStorageForLesson(lessonId),
-    // Видео может быть заметно больше, чем вложения-документы
+    
     limits: { fileSize: 500 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
       const allowed = /\.(mp4|webm|ogg|mov|m4v)$/i.test(file.originalname);

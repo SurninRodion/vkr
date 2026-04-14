@@ -1,5 +1,5 @@
 async function adminMiddleware(req, res, next) {
-  // authMiddleware должен был уже установить req.user
+  
   const user = req.user;
 
   if (!user) {
@@ -14,4 +14,3 @@ async function adminMiddleware(req, res, next) {
 }
 
 module.exports = adminMiddleware;
-

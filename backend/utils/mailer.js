@@ -38,4 +38,3 @@ module.exports = {
   isMailConfigured,
   sendMail,
 };
-

@@ -18,4 +18,3 @@ router.get('/:id', getTask);
 router.post('/submit', authMiddleware, requireVerifiedEmail, submitSolution);
 
 module.exports = router;
-

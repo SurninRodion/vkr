@@ -75,7 +75,7 @@ function getUserStats(userId) {
 
         const solvedTasks = row?.solvedTasks || 0;
         const avgScore10 = row?.avgScore10 || 0;
-        const avgPromptScore = Math.round(((avgScore10 / 2) || 0) * 10) / 10; // 0–5, 1 знак
+        const avgPromptScore = Math.round(((avgScore10 / 2) || 0) * 10) / 10; 
 
         resolve({ solvedTasks, avgPromptScore });
       }
@@ -89,5 +89,3 @@ module.exports = {
   getCompletedTaskIds,
   getUserStats
 };
-
-

@@ -13,4 +13,3 @@ router.get('/certificates/:id/pdf', authMiddleware, getMyCertificatePdf);
 router.put('/', authMiddleware, updateProfile);
 
 module.exports = router;
-

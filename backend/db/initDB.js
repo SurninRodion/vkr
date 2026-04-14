@@ -156,7 +156,6 @@ function initDB() {
       }
     });
 
-    // Миграция для добавления поля role в существующую таблицу users
     db.run(
       "ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'",
       (err) => {
@@ -309,7 +308,6 @@ function initDB() {
       }
     });
 
-    // Таблица библиотеки промптов (админская)
     db.run(
       `
         CREATE TABLE IF NOT EXISTS prompt_library (
@@ -369,7 +367,6 @@ function initDB() {
       }
     );
 
-    // Таблицы курсов и уроков
     db.run(
       `
         CREATE TABLE IF NOT EXISTS courses (
@@ -407,7 +404,6 @@ function initDB() {
       }
     );
 
-    // Записи пользователей на курсы и прогресс по урокам
     db.run(
       `
         CREATE TABLE IF NOT EXISTS course_enrollments (
@@ -449,7 +445,6 @@ function initDB() {
       }
     );
 
-    // Вложения к урокам (файлы, картинки)
     db.run(
       `
         CREATE TABLE IF NOT EXISTS course_lesson_attachments (
@@ -471,7 +466,6 @@ function initDB() {
       }
     );
 
-    // Видео-ресурсы уроков (загрузки из конструктора для шагов типа "video")
     db.run(
       `
         CREATE TABLE IF NOT EXISTS course_lesson_videos (
@@ -493,7 +487,6 @@ function initDB() {
       }
     );
 
-    // Вопросы закрепляющего теста к уроку (урок считается пройденным только после прохождения теста)
     db.run(
       `
         CREATE TABLE IF NOT EXISTS course_quiz_questions (
@@ -515,7 +508,6 @@ function initDB() {
       }
     );
 
-    // Модули курса (расширение: Курс → Модули → Уроки)
     db.run(
       `
         CREATE TABLE IF NOT EXISTS course_modules (
@@ -535,7 +527,6 @@ function initDB() {
       }
     );
 
-    // Шаги урока (теория, видео, тест, практическое задание)
     db.run(
       `
         CREATE TABLE IF NOT EXISTS course_lesson_steps (
@@ -556,7 +547,6 @@ function initDB() {
       }
     );
 
-    // Ответы на практические шаги курса (текст + результат проверки GigaChat)
     db.run(
       `
         CREATE TABLE IF NOT EXISTS course_practical_submissions (
@@ -582,7 +572,6 @@ function initDB() {
       }
     );
 
-    // ===== CERTIFICATES (Course completion) =====
     db.run(
       `
         CREATE TABLE IF NOT EXISTS course_certificate_templates (
@@ -628,7 +617,6 @@ function initDB() {
       }
     );
 
-    // Расширение course_lessons: привязка к модулю
     db.run(
       "ALTER TABLE course_lessons ADD COLUMN module_id TEXT REFERENCES course_modules(id)",
       (err) => {
@@ -640,7 +628,6 @@ function initDB() {
       }
     );
 
-    // Расширение course_lessons: закрепляющий тест обязателен/опционален (по умолчанию — обязателен)
     db.run(
       "ALTER TABLE course_lessons ADD COLUMN quiz_required INTEGER DEFAULT 1",
       (err) => {
@@ -652,7 +639,6 @@ function initDB() {
       }
     );
 
-    // Seed demo courses (idempotent by title)
     seedCourses();
   });
 }
@@ -662,4 +648,3 @@ if (require.main === module) {
 }
 
 module.exports = initDB;
-
