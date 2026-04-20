@@ -125,9 +125,7 @@ function renderStepBlock(step, stepIndex, lessonId, courseId, practicalSaved, pr
         : ytBeMatch
           ? `https://www.youtube.com/embed/${ytBeMatch[1]}`
           : url;
-      const isFileVideo =
-        /^\/uploads\
-        /\.(mp4|webm|ogg|mov|m4v)(\?|#|$)/i.test(url);
+      const isFileVideo = /^\/uploads\/.*\.(mp4|webm|ogg|mov|m4v)(\?|#|$)/i.test(url);
       inner = `
         <h4 class="lesson-step-title">${escapeHtml(p.title || 'Видео')}</h4>
         ${
