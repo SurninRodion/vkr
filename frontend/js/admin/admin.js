@@ -16,7 +16,7 @@ function getAdminHeaders() {
       headers.Authorization = `Bearer ${parsed.token}`;
     }
   } catch {
-    
+
   }
 
   return headers;
@@ -206,3 +206,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 });
+

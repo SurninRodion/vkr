@@ -22,7 +22,7 @@ function getAdminHeaders() {
       headers.Authorization = `Bearer ${parsed.token}`;
     }
   } catch {
-    
+
   }
 
   return headers;

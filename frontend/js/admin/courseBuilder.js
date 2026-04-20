@@ -10,7 +10,7 @@ function getAdminHeaders() {
     if (!raw) return headers;
     const parsed = JSON.parse(raw);
     if (parsed?.token) headers.Authorization = `Bearer ${parsed.token}`;
-  } catch (_) {}
+  } catch (_) { }
   return headers;
 }
 
@@ -21,7 +21,7 @@ function getAdminAuthHeaders() {
     if (!raw) return headers;
     const parsed = JSON.parse(raw);
     if (parsed?.token) headers.Authorization = `Bearer ${parsed.token}`;
-  } catch (_) {}
+  } catch (_) { }
   return headers;
 }
 
@@ -82,16 +82,14 @@ let state = {
   currentCourse: null,
   pendingStep: null,
   profile: null,
-  
   pendingModuleIndex: null,
-  
   lessonModal: null,
   certificateTemplate: null,
   certificateDraft: null,
 };
 
 function getDefaultCertificateTemplateForDraft(courseTitle) {
-  
+  // Должно соответствовать дефолту на бэкенде (примерно), чтобы черновик не был пустым.
   return {
     enabled: true,
     title: `Сертификат: ${courseTitle || 'Курс'}`,
@@ -624,7 +622,7 @@ function buildCertificatePreviewDoc({ templateHtml, templateCss }, { userName, c
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="preconnect" href="https:
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
   <style>${String(templateCss || '')}</style>
@@ -1078,7 +1076,7 @@ function openStepFormForType(stepType, payload) {
             correct_index: typeof q?.correct_index === 'number' ? q.correct_index : 0,
           }));
         }
-        // backward compat: старый формат (один вопрос в payload)
+
         const opts = Array.isArray(payload.options) && payload.options.length ? payload.options : ['', ''];
         const ci = typeof payload.correct_index === 'number' ? payload.correct_index : 0;
         const qq = payload.question || '';
@@ -1099,7 +1097,7 @@ function openStepFormForType(stepType, payload) {
         </div>
       `;
 
-      // Делегирование кликов внутри редактора тест-шага (вопросы/варианты)
+
       if (bodyEl.dataset.testStepBound !== '1') {
         bodyEl.dataset.testStepBound = '1';
         bodyEl.addEventListener('click', (e) => {
@@ -1112,7 +1110,7 @@ function openStepFormForType(stepType, payload) {
           e.preventDefault();
 
           const current = collectTestQuestionsFromModal();
-          if (current === null) return; // покажет toast
+          if (current === null) return;
           let questions = current;
 
           if (addQ) {
@@ -1378,7 +1376,7 @@ async function saveCourse() {
     state.currentCourse = { ...data, id: newId };
     if (newId) setCourseIdInUrl(newId);
 
-    // Если шаблон сертификата редактировали до сохранения курса — сохраним его сейчас
+    // Если шаблон сертификата редактировали до сохранения курса 
     if (
       newId &&
       state.certificateDraft &&

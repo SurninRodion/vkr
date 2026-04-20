@@ -1,3 +1,4 @@
+
 (function () {
   var v = '0';
   try {
@@ -6,7 +7,7 @@
       var s = JSON.parse(raw);
       if (s && s.isAuthenticated) v = '1';
     }
-  } catch (e) {}
+  } catch (e) { }
   document.documentElement.setAttribute('data-auth', v);
 
   var css =
@@ -25,6 +26,7 @@
   el.textContent = css;
   document.head.appendChild(el);
 })();
+
 
 (function () {
   function readAuth() {

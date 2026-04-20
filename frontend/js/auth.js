@@ -17,7 +17,7 @@ function setAuthState(next) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   try {
     document.documentElement.setAttribute('data-auth', next.isAuthenticated ? '1' : '0');
-  } catch (_) {}
+  } catch (_) { }
   const event = new CustomEvent('auth:change', { detail: next });
   window.dispatchEvent(event);
 }
@@ -94,6 +94,7 @@ export async function register(payload) {
   }
 }
 
+
 document.addEventListener('DOMContentLoaded', () => {
   const loginForm = document.getElementById('login-form');
   if (loginForm) {
@@ -160,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
       url.searchParams.delete('resetToken');
       window.history.replaceState({}, '', url.toString());
     } catch {
-      
+
     }
   }
 
@@ -205,3 +206,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+

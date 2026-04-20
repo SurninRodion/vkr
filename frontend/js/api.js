@@ -1,6 +1,7 @@
 const API_BASE = '/api';
 const AUTH_STORAGE_KEY = 'promptlearn_auth';
 
+
 export class ApiError extends Error {
   constructor(message, { status, retryAfterSeconds } = {}) {
     super(message);
@@ -9,6 +10,7 @@ export class ApiError extends Error {
     this.retryAfterSeconds = retryAfterSeconds;
   }
 }
+
 
 export function formatRetryAfterRu(seconds) {
   const s = Math.max(0, Math.ceil(Number(seconds) || 0));
@@ -19,6 +21,7 @@ export function formatRetryAfterRu(seconds) {
   if (r === 0) return `${m} мин`;
   return `${m} мин ${r} сек`;
 }
+
 
 export function rateLimitEmailMessage(err) {
   if (!(err instanceof ApiError) || err.status !== 429) return null;
@@ -65,7 +68,7 @@ async function request(path, { method = 'GET', body, withAuth = true } = {}) {
         retryAfterSeconds = data.retryAfterSeconds;
       }
     } catch {
-      
+
     }
     if (retryAfterSeconds == null && res.status === 429) {
       const ra = res.headers.get('Retry-After');
@@ -158,6 +161,7 @@ export async function apiGetTask(id) {
   });
 }
 
+/** Список id заданий, выполненных текущим пользователем. */
 export async function apiGetCompletedTaskIds() {
   const data = await request('/tasks/completed-ids', {
     method: 'GET',
@@ -166,6 +170,7 @@ export async function apiGetCompletedTaskIds() {
   return data.completedTaskIds || [];
 }
 
+/** Результат текущего пользователя по заданию (для просмотра после выполнения). */
 export async function apiGetTaskResult(taskId) {
   return request(`/tasks/${encodeURIComponent(taskId)}/result`, {
     method: 'GET',
@@ -221,12 +226,16 @@ export async function apiUpdateProfile(payload) {
   });
 }
 
+// Пока прогресс берём из простого мок-ответа — не персонализированный,
+// чтобы не мешать основной логике профиля.
 export async function apiGetProgress() {
   return Promise.resolve({
     coursesCompleted: 35,
     tasksCompleted: 20,
   });
 }
+
+// ——— Курсы (публичные и для авторизованных) ———
 
 export async function apiGetCourses() {
   return request('/courses', { method: 'GET', withAuth: false });
@@ -299,7 +308,7 @@ export async function apiGetMyCertificateHtml(id) {
       const data = await res.json();
       message = data.message || message;
     } catch {
-      
+
     }
     throw new ApiError(message, { status: res.status });
   }
@@ -330,7 +339,7 @@ export async function apiDownloadMyCertificatePdf(id) {
       const data = await res.json();
       message = data.message || message;
     } catch {
-      
+
     }
     throw new ApiError(message, { status: res.status });
   }
@@ -362,3 +371,4 @@ export async function apiSubmitCoursePractical(courseId, lessonId, stepId, text)
     score: typeof data.score === 'number' ? data.score : null,
   };
 }
+
