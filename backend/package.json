@@ -1,7 +1,7 @@
 {
   "name": "promptlearn-backend",
   "version": "1.0.0",
-  "description": "Backend API for PromptLearn — a practical platform for learning prompt engineering.",
+  "description": "",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
