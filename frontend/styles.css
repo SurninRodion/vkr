@@ -326,7 +326,7 @@ html[data-auth="1"] #hero-dashboard {
   position: absolute;
   right: 0;
   top: 110%;
-  min-width: 200px;
+  min-width: 300px;
   background: var(--color-card);
   border-radius: 16px;
   box-shadow: var(--shadow-soft);

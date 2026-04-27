@@ -105,5 +105,5 @@ app.use((err, req, res, next) => {
 initDB();
 
 app.listen(PORT, () => {
-  console.log(`PromptLearn backend listening on http://localhost:${PORT}`);
+  console.log(`PromptAcademy backend listening on http://localhost:${PORT}`);
 });

@@ -21,6 +21,10 @@ function buildAchievements(user, stats) {
     achievements.push('Начало пути в промпт-инжиниринге');
   }
 
+  if (user.points >= 1000) {
+    achievements.push('Собрано 1000+ очков')
+  }
+
   return achievements;
 }
 

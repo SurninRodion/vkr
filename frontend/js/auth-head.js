@@ -65,7 +65,7 @@
     var ini = initials(user);
     var isAdmin = user && user.role === 'admin';
     var adminItem = isAdmin
-      ? '<div class="user-menu-item" data-menu="admin">Администрирование<span>Панель администратора</span></div>'
+      ? '<div class="user-menu-item" data-menu="admin">Админ-панель<span>Управление системой</span></div>'
       : '';
 
     userWrap.innerHTML =
@@ -77,8 +77,8 @@
       '<div class="user-menu-dropdown" id="user-menu-dropdown">' +
       '<div class="user-menu-item" data-menu="profile">Профиль<span>Статистика</span></div>' +
       adminItem +
-      '<div class="user-menu-item" data-menu="settings">Настройки<span>Скоро</span></div>' +
-      '<div class="user-menu-item" data-menu="logout">Выйти</div>' +
+
+      '<div class="user-menu-item" data-menu="logout">Выйти<span>Завершить сеанс</span></div>' +
       '</div></div>';
   };
 })();
