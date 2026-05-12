@@ -1,6 +1,6 @@
 import { initNavbar, initGuestProtectedButtons } from './ui.js';
 import { getAuthState } from './auth.js';
-import { apiGetProgress } from './api.js';
+import { apiGetProfileProgress } from './api.js';
 import { initSessionManager } from './session.js';
 
 function firstNameFromUser(user) {
@@ -28,18 +28,38 @@ function initHomeProgress() {
 
   if (!barCourses || !labelCourses || !barTasks || !labelTasks) return;
 
-  apiGetProgress().then((data) => {
-    const courses = Math.max(0, Math.min(100, data.coursesCompleted));
-    const tasks = Math.max(0, Math.min(100, data.tasksCompleted));
+  const courseGoal = 5;
+  const taskGoal = 10;
+  const { isAuthenticated } = getAuthState();
+  if (!isAuthenticated) {
+    labelCourses.textContent = '—';
+    labelTasks.textContent = '—';
+    barCourses.style.transform = 'scaleX(0)';
+    barTasks.style.transform = 'scaleX(0)';
+    return;
+  }
 
-    requestAnimationFrame(() => {
-      barCourses.style.transform = `scaleX(${courses / 100})`;
-      barTasks.style.transform = `scaleX(${tasks / 100})`;
+  apiGetProfileProgress()
+    .then((data) => {
+      const doneCourses = Number(data?.totals?.completedCoursesCount ?? 0);
+      const doneTasks = Number(data?.totals?.tasksCompleted ?? data?.solvedTasks ?? 0);
+      const courses = Math.round(Math.min(100, (doneCourses / courseGoal) * 100));
+      const tasks = Math.round(Math.min(100, (doneTasks / taskGoal) * 100));
+
+      requestAnimationFrame(() => {
+        barCourses.style.transform = `scaleX(${courses / 100})`;
+        barTasks.style.transform = `scaleX(${tasks / 100})`;
+      });
+
+      labelCourses.textContent = `${courses}%`;
+      labelTasks.textContent = `${tasks}%`;
+    })
+    .catch(() => {
+      labelCourses.textContent = '—';
+      labelTasks.textContent = '—';
+      barCourses.style.transform = 'scaleX(0)';
+      barTasks.style.transform = 'scaleX(0)';
     });
-
-    labelCourses.textContent = `${courses}%`;
-    labelTasks.textContent = `${tasks}%`;
-  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -56,5 +76,8 @@ document.addEventListener('DOMContentLoaded', () => {
 window.addEventListener('auth:change', () => {
   if (document.getElementById('hero-guest')) {
     initHomeHero();
+  }
+  if (document.getElementById('progress-courses-bar')) {
+    initHomeProgress();
   }
 });

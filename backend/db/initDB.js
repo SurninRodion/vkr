@@ -639,6 +639,230 @@ function initDB() {
       }
     );
 
+    db.run(
+      `
+        CREATE TABLE IF NOT EXISTS achievement_definitions (
+          id TEXT PRIMARY KEY,
+          key TEXT UNIQUE NOT NULL,
+          category TEXT NOT NULL,
+          title TEXT NOT NULL,
+          description TEXT NOT NULL,
+          icon TEXT NOT NULL DEFAULT '',
+          rarity TEXT NOT NULL CHECK (
+            rarity IN ('common','rare','epic','legendary')
+          ),
+          points_reward INTEGER NOT NULL DEFAULT 0,
+          hidden INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT DEFAULT (datetime('now'))
+        )
+      `,
+      (err) => {
+        if (err) {
+          console.error('[DB] Error creating achievement_definitions:', err.message);
+        } else {
+          console.log('[DB] achievement_definitions table ready');
+        }
+      }
+    );
+
+    db.run(
+      `
+        CREATE TABLE IF NOT EXISTS user_achievements (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          achievement_id TEXT NOT NULL,
+          unlocked_at TEXT DEFAULT (datetime('now')),
+          UNIQUE(user_id, achievement_id),
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (achievement_id) REFERENCES achievement_definitions(id)
+        )
+      `,
+      (err) => {
+        if (err) {
+          console.error('[DB] Error creating user_achievements:', err.message);
+        } else {
+          console.log('[DB] user_achievements table ready');
+        }
+      }
+    );
+
+    db.run(
+      `
+        CREATE INDEX IF NOT EXISTS idx_user_achievements_user
+        ON user_achievements (user_id)
+      `,
+      (err) => {
+        if (err && !/already exists/i.test(err.message || '')) {
+          console.error('[DB] idx_user_achievements_user:', err.message);
+        }
+      }
+    );
+
+    db.run(
+      `
+        CREATE INDEX IF NOT EXISTS idx_user_achievements_definition
+        ON user_achievements (achievement_id)
+      `,
+      (err) => {
+        if (err && !/already exists/i.test(err.message || '')) {
+          console.error('[DB] idx_user_achievements_definition:', err.message);
+        }
+      }
+    );
+
+    function seedAchievementDefinitions(done) {
+      const rows = [
+        [
+          'aaaaaaaa-aaaa-4aaa-a000-000000000001',
+          'edu_first_course',
+          'learning',
+          '🎓 Первый курс',
+          'Завершите первый учебный курс целиком: все уроки отмечены как пройденные.',
+          '🎓',
+          'common',
+          35,
+          0,
+        ],
+        [
+          'aaaaaaaa-aaaa-4aaa-a000-000000000002',
+          'edu_five_courses',
+          'learning',
+          '📚 Завершил 5 курсов',
+          'Пройдите пять разных курсов до конца — серьёзный вклад в обучение.',
+          '📚',
+          'epic',
+          160,
+          0,
+        ],
+        [
+          'aaaaaaaa-aaaa-4aaa-a000-000000000003',
+          'edu_theory_master',
+          'learning',
+          '🧠 Мастер теории',
+          'Закройте не менее 40 уроков по курсам — глубокая работа с материалом.',
+          '🧠',
+          'rare',
+          90,
+          0,
+        ],
+        [
+          'aaaaaaaa-aaaa-4aaa-a000-000000000004',
+          'practice_first_task',
+          'practice',
+          '⚡ Первое задание',
+          'Выполните первое практическое задание в разделе «Практика».',
+          '⚡',
+          'common',
+          25,
+          0,
+        ],
+        [
+          'aaaaaaaa-aaaa-4aaa-a000-000000000005',
+          'practice_ten_tasks',
+          'practice',
+          '🔥 Выполнил 10 заданий',
+          'Решите 10 практических заданий — уверенная серия побед.',
+          '🔥',
+          'rare',
+          80,
+          0,
+        ],
+        [
+          'aaaaaaaa-aaaa-4aaa-a000-000000000006',
+          'practice_high_score',
+          'practice',
+          '🎯 Получил высокий score',
+          'Получите оценку эффективности не ниже 8/10 хотя бы в одном задании.',
+          '🎯',
+          'common',
+          40,
+          0,
+        ],
+        [
+          'aaaaaaaa-aaaa-4aaa-a000-000000000007',
+          'act_1000_points',
+          'activity',
+          '🚀 Набрал 1000 очков',
+          'Достигните суммарно 1000 очков активности.',
+          '🚀',
+          'common',
+          50,
+          0,
+        ],
+        [
+          'aaaaaaaa-aaaa-4aaa-a000-000000000008',
+          'act_top10',
+          'activity',
+          '👑 Попал в ТОП-10',
+          'Стремитесь войти в топ-10 глобального рейтинга по очкам.',
+          '👑',
+          'epic',
+          175,
+          0,
+        ],
+        [
+          'aaaaaaaa-aaaa-4aaa-a000-000000000009',
+          'act_first_place',
+          'activity',
+          '🥇 Первое место в рейтинге',
+          'Займите первую строчку рейтинга.',
+          '🥇',
+          'legendary',
+          400,
+          0,
+        ],
+        [
+          'aaaaaaaa-aaaa-4aaa-a000-00000000000a',
+          'pe_prompt_architect',
+          'prompting',
+          '🤖 Prompt Architect',
+          'Обработайте в «Лаборатории» 25 промптов (анализ/генерация).',
+          '🤖',
+          'rare',
+          110,
+          0,
+        ],
+        [
+          'aaaaaaaa-aaaa-4aaa-a000-00000000000b',
+          'pe_prompt_optimizer',
+          'prompting',
+          '🛠 Prompt Optimizer',
+          'При средней оценке за решения практических заданий не ниже 8/10 завершите 10+ задач.',
+          '🛠',
+          'epic',
+          150,
+          0,
+        ],
+        [
+          'aaaaaaaa-aaaa-4aaa-a000-00000000000c',
+          'pe_ai_researcher',
+          'prompting',
+          '🧪 AI Researcher',
+          'Сделайте 50 анализов промптов в «Лаборатории» — исследовательский склад ума.',
+          '🧪',
+          'legendary',
+          350,
+          0,
+        ],
+      ];
+
+      const stmt = db.prepare(
+        `INSERT OR IGNORE INTO achievement_definitions (
+          id, key, category, title, description, icon, rarity, points_reward, hidden
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      );
+      rows.forEach((row) => {
+        stmt.run(row);
+      });
+      stmt.finalize((e) => done(e || null));
+    }
+
+    seedAchievementDefinitions((seedErr) => {
+      if (seedErr) {
+        console.error('[DB] Achievement seed:', seedErr.message);
+      }
+    });
+
     seedCourses();
   });
 }

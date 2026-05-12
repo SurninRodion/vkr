@@ -1,31 +1,31 @@
 const { getUserById, updateUserProfile } = require('../models/userModel');
 const { getUserStats } = require('../models/resultModel');
+const { listUserAchievementsWithMeta, getGamificationMetrics } = require('../models/achievementModel');
+const { nearestAchievements, evaluateForUser } = require('../services/achievementService');
+const { getUserLeague } = require('../utils/leagues');
 
-function buildAchievements(user, stats) {
-  const achievements = [];
+async function composeProfileAchievementsStrings(userId) {
+  try {
+    const rows = await listUserAchievementsWithMeta(userId);
+    if (!rows.length) return [];
+    return rows.map((r) => `${r.icon} ${r.title}`.trim());
+  } catch (_) {
+    return [];
+  }
+}
 
-  if (stats.solvedTasks >= 1) {
-    achievements.push('Первое решённое задание');
-  }
-  if (stats.solvedTasks >= 5) {
-    achievements.push('Устойчивый практик (5+ заданий)');
-  }
-  if (stats.avgPromptScore >= 4.0) {
-    achievements.push('Стабильное качество промптов');
-  }
-  if (user.points >= 500) {
-    achievements.push('Собрано 500+ очков');
-  }
-
-  if (!achievements.length) {
-    achievements.push('Начало пути в промпт-инжиниринге');
-  }
-
-  if (user.points >= 1000) {
-    achievements.push('Собрано 1000+ очков')
-  }
-
-  return achievements;
+async function composeLeaguePack(userPoints) {
+  const info = getUserLeague(Number(userPoints ?? 0));
+  return {
+    slug: info.slug,
+    title: info.title,
+    icon: info.icon,
+    color: info.color,
+    gradient: info.gradient,
+    minPoints: info.minPoints,
+    nextLeague: info.nextLeague,
+    progressToNext: info.progressToNext,
+  };
 }
 
 async function getProfile(req, res) {
@@ -33,13 +33,35 @@ async function getProfile(req, res) {
     const userId = req.user.id;
     console.log('[ProfileController] GET /api/profile user:', userId);
 
-    const user = await getUserById(userId);
+    let user = await getUserById(userId);
     if (!user) {
       return res.status(404).json({ message: 'Пользователь не найден' });
     }
 
+    try {
+      await evaluateForUser(userId);
+      const again = await getUserById(userId);
+      if (again) user = again;
+    } catch (_) {
+      
+    }
+
     const stats = await getUserStats(userId);
-    const achievements = buildAchievements(user, stats);
+    const achievements = await composeProfileAchievementsStrings(userId);
+    const league = await composeLeaguePack(user.points);
+    let unlockedAchievementDetails = [];
+    try {
+      unlockedAchievementDetails = await listUserAchievementsWithMeta(userId);
+      unlockedAchievementDetails = unlockedAchievementDetails.slice(0, 8).map((r) => ({
+        id: r.achievementId,
+        key: r.key,
+        title: r.title,
+        icon: r.icon,
+        rarity: r.rarity,
+      }));
+    } catch (_) {
+      
+    }
 
     return res.json({
       name: user.name,
@@ -50,7 +72,9 @@ async function getProfile(req, res) {
       emailVerified: Boolean(user.email_verified_at),
       solvedTasks: stats.solvedTasks,
       avgPromptScore: stats.avgPromptScore,
-      achievements
+      achievements,
+      league,
+      unlockedAchievementDetails,
     });
   } catch (err) {
     console.error('[ProfileController] Error getting profile:', err.message);
@@ -76,9 +100,30 @@ async function updateProfile(req, res) {
 
     await updateUserProfile(userId, { name: name.trim() });
 
-    const updatedUser = await getUserById(userId);
+    let updatedUser = await getUserById(userId);
     const stats = await getUserStats(userId);
-    const achievements = buildAchievements(updatedUser, stats);
+    try {
+      await evaluateForUser(userId);
+      const again = await getUserById(userId);
+      if (again) updatedUser = again;
+    } catch (_) {
+      
+    }
+    const achievements = await composeProfileAchievementsStrings(userId);
+    const league = await composeLeaguePack(updatedUser.points);
+    let unlockedAchievementDetails = [];
+    try {
+      unlockedAchievementDetails = await listUserAchievementsWithMeta(userId);
+      unlockedAchievementDetails = unlockedAchievementDetails.slice(0, 8).map((r) => ({
+        id: r.achievementId,
+        key: r.key,
+        title: r.title,
+        icon: r.icon,
+        rarity: r.rarity,
+      }));
+    } catch (_) {
+      
+    }
 
     return res.json({
       name: updatedUser.name,
@@ -89,7 +134,9 @@ async function updateProfile(req, res) {
       emailVerified: Boolean(updatedUser.email_verified_at),
       solvedTasks: stats.solvedTasks,
       avgPromptScore: stats.avgPromptScore,
-      achievements
+      achievements,
+      league,
+      unlockedAchievementDetails,
     });
   } catch (err) {
     console.error('[ProfileController] Error updating profile:', err.message);
@@ -97,7 +144,67 @@ async function updateProfile(req, res) {
   }
 }
 
+async function getProfileProgress(req, res) {
+  try {
+    const userId = req.user.id;
+    let user = await getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Пользователь не найден' });
+    }
+    try {
+      await evaluateForUser(userId);
+      const again = await getUserById(userId);
+      if (again) user = again;
+    } catch (_) {
+      
+    }
+    const stats = await getUserStats(userId);
+    let metrics = null;
+    try {
+      metrics = await getGamificationMetrics(userId);
+    } catch (_) {
+      
+    }
+
+    let leaguePack = {};
+    try {
+      leaguePack = await composeLeaguePack(user.points);
+    } catch (_) {
+      
+    }
+
+    let nearest = [];
+    try {
+      nearest = await nearestAchievements(userId, 5);
+    } catch (_) {
+      
+    }
+
+    return res.json({
+      points: Number(user.points ?? 0),
+      levelNumeric: Number(user.level ?? 1),
+      league: leaguePack,
+      solvedTasks: stats.solvedTasks,
+      avgPromptScore: stats.avgPromptScore,
+      rank: metrics ? metrics.rank : null,
+      totals: metrics
+        ? {
+            tasksCompleted: metrics.tasksCompleted,
+            completedCoursesCount: metrics.completedCoursesCount,
+            lessonCompletions: metrics.lessonCompletions,
+            labPromptCount: metrics.labPromptCount,
+          }
+        : null,
+      nearestAchievements: nearest,
+    });
+  } catch (err) {
+    console.error('[ProfileController] getProfileProgress:', err.message);
+    return res.status(500).json({ message: 'Ошибка получения прогресса' });
+  }
+}
+
 module.exports = {
   getProfile,
-  updateProfile
+  updateProfile,
+  getProfileProgress,
 };

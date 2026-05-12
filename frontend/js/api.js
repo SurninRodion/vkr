@@ -190,6 +190,7 @@ export async function apiSubmitPrompt(promptText) {
     analysis: normalizeAnalysisToFive(data.analysis),
     generatedContent: data.generatedContent || null,
     analysisComment: data.analysis?.aiResponse || null,
+    achievementsUnlocked: Array.isArray(data.achievementsUnlocked) ? data.achievementsUnlocked : [],
   };
 }
 
@@ -207,11 +208,35 @@ export async function apiSubmitTaskSolution(taskId, promptText) {
     analysisComment: data.analysis?.aiResponse || null,
     rawScore: typeof data.score === 'number' ? data.score : null,
     pointsAwarded: typeof data.pointsAwarded === 'number' ? data.pointsAwarded : null,
+    achievementsUnlocked: Array.isArray(data.achievementsUnlocked) ? data.achievementsUnlocked : [],
   };
 }
 
 export async function apiGetLeaderboard() {
   return request('/leaderboard', { method: 'GET', withAuth: false });
+}
+
+/** Расширенный рейтинг: топ, лиги, лучшие достижения. */
+export async function apiGetLeaderboardEnhanced(limit = 25) {
+  const q = Number.isFinite(limit) ? `?limit=${encodeURIComponent(String(limit))}` : '';
+  return request(`/leaderboard/enhanced${q}`, {
+    method: 'GET',
+    withAuth: false,
+  });
+}
+
+/** Каталог достижений + статистика. Токен (если есть) учитывает «получено / не получено». */
+export async function apiGetAchievements() {
+  return request('/achievements', { method: 'GET', withAuth: true });
+}
+
+export async function apiGetMyAchievements() {
+  return request('/achievements/my', { method: 'GET', withAuth: true });
+}
+
+/** Прогресс аккаунта: лига, ближайшие цели по достижениям. */
+export async function apiGetProfileProgress() {
+  return request('/profile/progress', { method: 'GET', withAuth: true });
 }
 
 export async function apiGetProfile() {
@@ -223,15 +248,6 @@ export async function apiUpdateProfile(payload) {
     method: 'PUT',
     body: payload,
     withAuth: true,
-  });
-}
-
-// Пока прогресс берём из простого мок-ответа — не персонализированный,
-// чтобы не мешать основной логике профиля.
-export async function apiGetProgress() {
-  return Promise.resolve({
-    coursesCompleted: 35,
-    tasksCompleted: 20,
   });
 }
 

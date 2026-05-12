@@ -1,6 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const { analyzePrompt, generateFromPrompt } = require('../utils/aiAnalyzer');
 const { createPrompt } = require('../models/promptModel');
+const { evaluateForUser } = require('../services/achievementService');
 
 async function analyze(req, res) {
   try {
@@ -33,10 +34,18 @@ async function analyze(req, res) {
       analysis: JSON.stringify(analysis)
     });
 
+    let achievementsUnlocked = [];
+    try {
+      achievementsUnlocked = await evaluateForUser(userId);
+    } catch (e) {
+      console.error('[PromptController] achievements:', e.message);
+    }
+
     return res.status(201).json({
       aiResponse: analysis.aiResponse || '',
       analysis,
-      generatedContent: generatedContent || null
+      generatedContent: generatedContent || null,
+      achievementsUnlocked,
     });
   } catch (err) {
     console.error('[PromptController] Error analyzing prompt:', err.message);

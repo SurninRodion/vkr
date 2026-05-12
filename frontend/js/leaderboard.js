@@ -41,6 +41,11 @@ async function loadLeaderboard() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  
+  if (document.getElementById('gamification-leader-mount')) {
+    return;
+  }
+
   const table = document.getElementById('leaderboard-table');
   const homeTable = document.getElementById('home-leaderboard');
 

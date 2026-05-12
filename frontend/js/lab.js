@@ -6,6 +6,7 @@ import {
   normalizeAnalysisToFive
 } from './api.js';
 import { initAuthGate, showToast } from './ui.js';
+import { notifyAchievementsUnlocked } from './achievementHelpers.js';
 import { getAuthState } from './auth.js';
 
 function scoreToLabel(score) {
@@ -142,6 +143,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           analysisCommentEl.textContent = '';
         }
       }
+
+      notifyAchievementsUnlocked(result.achievementsUnlocked);
 
       const metrics = result.analysis;
       Object.entries(metrics).forEach(([name, score]) => {

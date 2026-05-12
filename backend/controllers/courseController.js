@@ -1,6 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const db = require('../db/db');
 const { analyzePrompt } = require('../utils/aiAnalyzer');
+const { evaluateForUser } = require('../services/achievementService');
 
 function escapeHtml(s) {
   return String(s ?? '')
@@ -626,8 +627,15 @@ function completeLesson(req, res) {
                 console.error('[CourseController] completeLesson insert error:', err2.message);
                 return res.status(500).json({ message: 'Ошибка сохранения прогресса' });
               }
-              maybeIssueCertificateForCourse(userId, courseId, () => {
-                res.json({ message: 'Урок отмечен как пройденный', lessonId });
+              maybeIssueCertificateForCourse(userId, courseId, async (cerr) => {
+                if (cerr) console.error('[CourseController] certificate:', cerr.message);
+                let achievementsUnlocked = [];
+                try {
+                  achievementsUnlocked = await evaluateForUser(userId);
+                } catch (e) {
+                  console.error('[CourseController] achievements:', e.message);
+                }
+                res.json({ message: 'Урок отмечен как пройденный', lessonId, achievementsUnlocked });
               });
             }
           );
@@ -711,13 +719,21 @@ function submitQuiz(req, res) {
             [userId, lessonId],
             function (err3) {
               if (err3) return res.status(500).json({ message: 'Ошибка сохранения прогресса' });
-              maybeIssueCertificateForCourse(userId, courseId, () => {
+              maybeIssueCertificateForCourse(userId, courseId, async (cerr) => {
+                if (cerr) console.error('[CourseController] certificate:', cerr.message);
+                let achievementsUnlocked = [];
+                try {
+                  achievementsUnlocked = await evaluateForUser(userId);
+                } catch (e) {
+                  console.error('[CourseController] achievements:', e.message);
+                }
                 res.json({
                   passed: true,
                   score: Math.round(score * 100),
                   total,
                   details,
-                  message: 'Тест пройден. Урок завершён.'
+                  message: 'Тест пройден. Урок завершён.',
+                  achievementsUnlocked,
                 });
               });
             }

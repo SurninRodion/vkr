@@ -3,6 +3,7 @@ const { analyzePrompt, generateFromPrompt } = require('../utils/aiAnalyzer');
 const { getAllTasks, getTaskById } = require('../models/taskModel');
 const { createTaskResult, getResultByUserAndTask, getCompletedTaskIds } = require('../models/resultModel');
 const { addPoints } = require('../models/userModel');
+const { evaluateForUser } = require('../services/achievementService');
 
 async function listTasks(req, res) {
   try {
@@ -83,12 +84,20 @@ async function submitSolution(req, res) {
 
     await addPoints(userId, task.points);
 
+    let achievementsUnlocked = [];
+    try {
+      achievementsUnlocked = await evaluateForUser(userId);
+    } catch (e) {
+      console.error('[TaskController] achievements:', e.message);
+    }
+
     return res.status(201).json({
       message: 'Решение отправлено и проанализировано',
       score,
       analysis,
       generatedContent: generatedContent || null,
-      pointsAwarded: task.points
+      pointsAwarded: task.points,
+      achievementsUnlocked,
     });
   } catch (err) {
     console.error('[TaskController] Error submitting solution:', err.message);

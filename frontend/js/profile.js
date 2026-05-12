@@ -1,3 +1,4 @@
+import { leagueBadgeClass } from './leagueHelpers.js';
 import {
   apiGetProfile,
   apiUpdateProfile,
@@ -206,6 +207,43 @@ function renderProfile(root, profile, myCourses = []) {
     </div>
   `;
 
+  const league = profile.league || null;
+  const leagueAside = league
+    ? `
+    <section class="profile-side-section profile-league-card-wrap" aria-label="Лига пользователя">
+      <h2 class="profile-side-heading">Лига</h2>
+      <div class="profile-league-card glass-card">
+        <div class="profile-league-head">
+          <span class="profile-league-emoji">${escapeHtml(league.icon || '⚔️')}</span>
+          <div>
+            <div class="${leagueBadgeClass(league.slug)} profile-league-chip">${escapeHtml(league.title || '')}</div>
+            <p class="muted profile-league-sub">
+              От ${escapeHtml(String(league.minPoints ?? 0))} очков
+              ${
+                league.nextLeague
+                  ? ` · до «${escapeHtml(league.nextLeague.title)}» ${escapeHtml(
+                      String(league.progressToNext?.pointsRemaining ?? '—')
+                    )} очк.`
+                  : ''
+              }
+            </p>
+          </div>
+        </div>
+        ${
+          league.progressToNext && league.nextLeague
+            ? `<div class="progress-bar-track profile-league-track">
+              <div class="progress-bar-fill" style="transform: scaleX(${Math.min(
+                1,
+                Math.max(0, (league.progressToNext.percent ?? 0) / 100)
+              )})"></div>
+            </div>`
+            : ''
+        }
+      </div>
+    </section>
+    `
+    : '';
+
   root.innerHTML = `
     <div class="profile-main">
       <div class="profile-header">
@@ -240,6 +278,7 @@ function renderProfile(root, profile, myCourses = []) {
       ${certsHtml}
     </div>
     <aside class="profile-side">
+      ${leagueAside}
       <div class="profile-level-card" aria-label="Уровень на платформе">
         <div class="profile-level-card-bg" aria-hidden="true"></div>
         <div class="profile-level-card-inner">

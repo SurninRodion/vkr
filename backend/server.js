@@ -14,6 +14,7 @@ const profileRoutes = require('./routes/profileRoutes');
 const courseRoutes = require('./routes/courseRoutes');
 const libraryRoutes = require('./routes/libraryRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const achievementRoutes = require('./routes/achievementRoutes');
 
 const app = express();
 
@@ -96,6 +97,7 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/library', libraryRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/achievements', achievementRoutes);
 
 app.use((err, req, res, next) => {
   console.error('[Server] Unhandled error:', err);

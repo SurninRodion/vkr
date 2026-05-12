@@ -11,6 +11,7 @@ import {
 import { getAuthState } from './auth.js';
 import { pluralRu } from './pluralize.js';
 import { showToast } from './ui.js';
+import { notifyAchievementsUnlocked } from './achievementHelpers.js';
 
 function escapeHtml(s) {
   const div = document.createElement('div');
@@ -1079,7 +1080,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           }
           btn.disabled = true;
           try {
-            await apiCompleteLesson(courseId, lessonId);
+            const lessonRes = await apiCompleteLesson(courseId, lessonId);
+            notifyAchievementsUnlocked(lessonRes.achievementsUnlocked);
             showToast('Урок отмечен как пройденный.', 'success');
             markLessonComplete(lessonId);
           } catch (e) {
@@ -1115,6 +1117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 (result.passed ? 'Тест пройден.' : `Набрано ${result.score ?? 0}%.`);
             }
             if (result.passed) {
+              notifyAchievementsUnlocked(result.achievementsUnlocked);
               showToast(result.message || 'Урок завершён.', 'success');
               markLessonComplete(lessonId);
               block.innerHTML = '<p class="tag tag-green" style="margin:0">Закрепляющий тест пройден</p>';

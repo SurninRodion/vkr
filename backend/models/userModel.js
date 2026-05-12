@@ -49,10 +49,12 @@ function addPoints(userId, pointsToAdd) {
     db.run(
       `
         UPDATE users
-        SET points = points + ?, level = 1 + CAST(points / 500 AS INTEGER)
+        SET
+          points = COALESCE(points, 0) + ?,
+          level = 1 + CAST((COALESCE(points, 0) + ?) / 500 AS INTEGER)
         WHERE id = ?
       `,
-      [pointsToAdd, userId],
+      [pointsToAdd, pointsToAdd, userId],
       function (err) {
         if (err) {
           console.error('[UserModel] Error adding points:', err.message);
