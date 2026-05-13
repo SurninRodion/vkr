@@ -9,10 +9,220 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="../styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+      .dashboard-charts-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+      }
+
+      .dashboard-chart-card {
+        background: var(--color-card);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .dashboard-chart-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.1);
+      }
+
+      .dashboard-chart-card.full-width {
+        grid-column: 1 / -1;
+      }
+
+      .dashboard-chart-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--color-text);
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .dashboard-chart-title .icon {
+        width: 20px;
+        height: 20px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+      }
+
+      .dashboard-chart-container {
+        position: relative;
+        height: 220px;
+        width: 100%;
+      }
+
+      .stat-card-enhanced {
+        background: var(--color-card);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .stat-card-enhanced::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--stat-color, #4f46e5), var(--stat-color-end, #6366f1));
+      }
+
+      .stat-card-enhanced:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.1);
+      }
+
+      .stat-card-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        flex-shrink: 0;
+        background: var(--stat-icon-bg, rgba(79, 70, 229, 0.1));
+        color: var(--stat-color, #4f46e5);
+      }
+
+      .stat-card-content {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .stat-card-label {
+        font-size: 12px;
+        color: var(--color-muted);
+        margin-bottom: 4px;
+      }
+
+      .stat-card-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--color-text);
+        line-height: 1.2;
+      }
+
+      .stat-card-trend {
+        font-size: 11px;
+        margin-top: 4px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .stat-card-trend--up {
+        color: #16a34a;
+      }
+
+      .stat-card-trend--down {
+        color: #dc2626;
+      }
+
+      .stat-card-trend--neutral {
+        color: var(--color-muted);
+      }
+
+      .admin-stats-grid-enhanced {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .dashboard-section-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--color-text);
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .dashboard-section-title::before {
+        content: '';
+        width: 4px;
+        height: 20px;
+        border-radius: 2px;
+        background: linear-gradient(180deg, #4f46e5, #6366f1);
+      }
+
+      .chart-legend-custom {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 12px;
+        justify-content: center;
+      }
+
+      .chart-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--color-muted);
+      }
+
+      .chart-legend-color {
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+      }
+
+      .no-data-message {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: var(--color-muted);
+        font-size: 13px;
+        text-align: center;
+      }
+
+      @media (max-width: 960px) {
+        .admin-stats-grid-enhanced {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .dashboard-charts-grid {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .dashboard-chart-card.full-width {
+          grid-column: 1;
+        }
+      }
+
+      @media (max-width: 520px) {
+        .admin-stats-grid-enhanced {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+    </style>
   </head>
   <body class="page">
     <header class="navbar">
@@ -67,22 +277,106 @@
               </div>
             </div>
 
-            <div class="admin-stats-grid" id="admin-stats">
-              <div class="admin-stat-card">
-                <div class="admin-stat-label">Всего пользователей</div>
-                <div class="admin-stat-value" id="stat-total-users">—</div>
+            <!-- Enhanced Stats Cards -->
+            <div class="admin-stats-grid-enhanced" id="admin-stats">
+              <div class="stat-card-enhanced" style="--stat-color: #4f46e5; --stat-color-end: #6366f1; --stat-icon-bg: rgba(79, 70, 229, 0.1);">
+                <div class="stat-card-icon">👥</div>
+                <div class="stat-card-content">
+                  <div class="stat-card-label">Всего пользователей</div>
+                  <div class="stat-card-value" id="stat-total-users">—</div>
+                  <div class="stat-card-trend stat-card-trend--neutral" id="stat-users-trend">
+                    <span>За всё время</span>
+                  </div>
+                </div>
               </div>
-              <div class="admin-stat-card">
-                <div class="admin-stat-label">Всего заданий</div>
-                <div class="admin-stat-value" id="stat-total-tasks">—</div>
+              <div class="stat-card-enhanced" style="--stat-color: #16a34a; --stat-color-end: #22c55e; --stat-icon-bg: rgba(22, 163, 74, 0.1);">
+                <div class="stat-card-icon">📋</div>
+                <div class="stat-card-content">
+                  <div class="stat-card-label">Всего заданий</div>
+                  <div class="stat-card-value" id="stat-total-tasks">—</div>
+                  <div class="stat-card-trend stat-card-trend--neutral">
+                    <span>Актуально</span>
+                  </div>
+                </div>
               </div>
-              <div class="admin-stat-card">
-                <div class="admin-stat-label">Всего промптов в библиотеке</div>
-                <div class="admin-stat-value" id="stat-total-prompts">—</div>
+              <div class="stat-card-enhanced" style="--stat-color: #ca8a04; --stat-color-end: #eab308; --stat-icon-bg: rgba(202, 138, 4, 0.1);">
+                <div class="stat-card-icon">💡</div>
+                <div class="stat-card-content">
+                  <div class="stat-card-label">Промптов в библиотеке</div>
+                  <div class="stat-card-value" id="stat-total-prompts">—</div>
+                  <div class="stat-card-trend stat-card-trend--neutral">
+                    <span>Коллекция</span>
+                  </div>
+                </div>
               </div>
-              <div class="admin-stat-card">
-                <div class="admin-stat-label">Активные пользователи</div>
-                <div class="admin-stat-value" id="stat-active-users">—</div>
+              <div class="stat-card-enhanced" style="--stat-color: #7c3aed; --stat-color-end: #a855f7; --stat-icon-bg: rgba(124, 58, 237, 0.1);">
+                <div class="stat-card-icon">🔥</div>
+                <div class="stat-card-content">
+                  <div class="stat-card-label">Активные пользователи</div>
+                  <div class="stat-card-value" id="stat-active-users">—</div>
+                  <div class="stat-card-trend stat-card-trend--neutral" id="stat-active-trend">
+                    <span>Выполнили задания</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="dashboard-section-title">Аналитика</div>
+            <div class="dashboard-charts-grid">
+              <!-- User Registration Trend -->
+              <div class="dashboard-chart-card">
+                <div class="dashboard-chart-title">
+                  <span class="icon" style="background: rgba(79, 70, 229, 0.1); color: #4f46e5;">📈</span>
+                  Регистрация пользователей (7 дней)
+                </div>
+                <div class="dashboard-chart-container">
+                  <canvas id="userTrendChart"></canvas>
+                </div>
+              </div>
+
+              <!-- Task Completion Stats -->
+              <div class="dashboard-chart-card">
+                <div class="dashboard-chart-title">
+                  <span class="icon" style="background: rgba(22, 163, 74, 0.1); color: #16a34a;">✅</span>
+                  Статус заданий
+                </div>
+                <div class="dashboard-chart-container">
+                  <canvas id="taskStatsChart"></canvas>
+                </div>
+              </div>
+
+              <!-- Task Difficulty Distribution -->
+              <div class="dashboard-chart-card">
+                <div class="dashboard-chart-title">
+                  <span class="icon" style="background: rgba(202, 138, 4, 0.1); color: #ca8a04;">📊</span>
+                  Задания по сложности
+                </div>
+                <div class="dashboard-chart-container">
+                  <canvas id="difficultyChart"></canvas>
+                </div>
+              </div>
+
+              <!-- Prompt Categories -->
+              <div class="dashboard-chart-card">
+                <div class="dashboard-chart-title">
+                  <span class="icon" style="background: rgba(124, 58, 237, 0.1); color: #7c3aed;">🏷️</span>
+                  Категории промптов
+                </div>
+                <div class="dashboard-chart-container">
+                  <canvas id="categoryChart"></canvas>
+                </div>
+              </div>
+
+              <!-- Course Enrollment -->
+              <div class="dashboard-chart-card full-width">
+                <div class="dashboard-chart-title">
+                  <span class="icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">🎓</span>
+                  Популярность курсов
+                </div>
+                <div class="dashboard-chart-container" style="height: 180px;">
+                  <canvas id="courseChart"></canvas>
+                </div>
               </div>
             </div>
           </div>
@@ -114,6 +408,6 @@
     <div class="toast-container" id="toast-container"></div>
 
     <script type="module" src="../js/app.js"></script>
-    <script type="module" src="../js/admin/admin.js"></script>
+    <script type="module" src="../js/admin/dashboard.js"></script>
   </body>
 </html>

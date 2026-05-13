@@ -238,11 +238,139 @@ async function getStats(req, res) {
       );
     });
 
+    // Get user registration trend (last 7 days)
+    const userTrend = await new Promise((resolve, reject) => {
+      db.all(
+        `
+          SELECT 
+            date('now', '-' || (6 - days.day) || ' days') as date,
+            COALESCE(registrations.count, 0) as count
+          FROM (
+            SELECT 0 as day UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 
+            UNION SELECT 4 UNION SELECT 5 UNION SELECT 6
+          ) days
+          LEFT JOIN (
+            SELECT 
+              julianday('now') - julianday(date(created_at)) as day,
+              COUNT(*) as count
+            FROM users 
+            WHERE created_at >= date('now', '-6 days')
+            GROUP BY day
+          ) registrations ON days.day = registrations.day
+          ORDER BY days.day
+        `,
+        [],
+        (err, rows) => {
+          if (err) {
+            console.error('[AdminController] Error fetching user trend:', err.message);
+            return reject(err);
+          }
+          resolve(rows || []);
+        }
+      );
+    });
+
+    // Get task completion stats - count results with score > 0 as completed, others as in progress
+    const taskStats = await new Promise((resolve, reject) => {
+      db.get(
+        `
+          SELECT 
+            (SELECT COUNT(*) FROM task_results WHERE score > 0) as completed,
+            (SELECT COUNT(*) FROM task_results WHERE score = 0 OR score IS NULL) as inProgress
+        `,
+        [],
+        (err, row) => {
+          if (err) {
+            console.error('[AdminController] Error fetching task stats:', err.message);
+            return reject(err);
+          }
+          resolve(row || { completed: 0, inProgress: 0 });
+        }
+      );
+    });
+
+    // Get task distribution by difficulty
+    const difficultyDist = await new Promise((resolve, reject) => {
+      db.all(
+        `
+          SELECT difficulty, COUNT(*) as count 
+          FROM tasks 
+          GROUP BY difficulty 
+          ORDER BY 
+            CASE difficulty 
+              WHEN 'easy' THEN 1 
+              WHEN 'medium' THEN 2 
+              WHEN 'hard' THEN 3 
+              ELSE 4 
+            END
+        `,
+        [],
+        (err, rows) => {
+          if (err) {
+            console.error('[AdminController] Error fetching difficulty distribution:', err.message);
+            return reject(err);
+          }
+          resolve(rows || []);
+        }
+      );
+    });
+
+    // Get prompt categories distribution
+    const categoryDist = await new Promise((resolve, reject) => {
+      db.all(
+        `
+          SELECT category, COUNT(*) as count 
+          FROM prompt_library 
+          GROUP BY category 
+          ORDER BY count DESC 
+          LIMIT 5
+        `,
+        [],
+        (err, rows) => {
+          if (err) {
+            console.error('[AdminController] Error fetching category distribution:', err.message);
+            return reject(err);
+          }
+          resolve(rows || []);
+        }
+      );
+    });
+
+    // Get course enrollment stats
+    const courseStats = await new Promise((resolve, reject) => {
+      db.all(
+        `
+          SELECT c.title, COUNT(e.user_id) as enrollments
+          FROM courses c
+          LEFT JOIN course_enrollments e ON c.id = e.course_id
+          GROUP BY c.id
+          ORDER BY enrollments DESC
+          LIMIT 5
+        `,
+        [],
+        (err, rows) => {
+          if (err) {
+            console.error('[AdminController] Error fetching course stats:', err.message);
+            return reject(err);
+          }
+          resolve(rows || []);
+        }
+      );
+    });
+
     return res.json({
       totalUsers: totals.totalUsers || 0,
       totalTasks: totals.totalTasks || 0,
       totalPrompts: totals.totalPrompts || 0,
-      activeUsers: totals.activeUsers || 0
+      activeUsers: totals.activeUsers || 0,
+      userTrend: userTrend,
+      taskStats: {
+        completed: taskStats.completed || 0,
+        inProgress: taskStats.inProgress || 0
+      },
+      difficultyDist: difficultyDist,
+      categoryDist: categoryDist,
+      courseStats: courseStats
     });
   } catch (err) {
     console.error('[AdminController] getStats error:', err.message);
