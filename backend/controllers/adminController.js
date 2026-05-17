@@ -242,22 +242,27 @@ async function getStats(req, res) {
     const userTrend = await new Promise((resolve, reject) => {
       db.all(
         `
-          SELECT 
-            date('now', '-' || (6 - days.day) || ' days') as date,
-            COALESCE(registrations.count, 0) as count
+                WITH date_series AS (
+          SELECT date('now', 'localtime', '-' || (6 - days.day) || ' days') as date
           FROM (
             SELECT 0 as day UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 
             UNION SELECT 4 UNION SELECT 5 UNION SELECT 6
           ) days
-          LEFT JOIN (
-            SELECT 
-              julianday('now') - julianday(date(created_at)) as day,
-              COUNT(*) as count
-            FROM users 
-            WHERE created_at >= date('now', '-6 days')
-            GROUP BY day
-          ) registrations ON days.day = registrations.day
-          ORDER BY days.day
+        ),
+        registration_counts AS (
+          SELECT 
+            date(created_at, 'localtime') as reg_date,
+            COUNT(*) as count
+          FROM users 
+          WHERE date(created_at, 'localtime') >= date('now', 'localtime', '-6 days')
+          GROUP BY date(created_at, 'localtime')
+        )
+        SELECT 
+          ds.date,
+          COALESCE(rc.count, 0) as count
+        FROM date_series ds
+        LEFT JOIN registration_counts rc ON ds.date = rc.reg_date
+        ORDER BY ds.date
         `,
         [],
         (err, rows) => {
@@ -265,6 +270,8 @@ async function getStats(req, res) {
             console.error('[AdminController] Error fetching user trend:', err.message);
             return reject(err);
           }
+          // Debug: выводим данные для отладки
+          console.log('[AdminController] User trend data:', JSON.stringify(rows));
           resolve(rows || []);
         }
       );

@@ -3764,6 +3764,7 @@ a.card.home-task-card:focus-visible {
   align-items: flex-start;
   gap: 16px;
   flex-wrap: wrap;
+  flex-direction: column;
 }
 
 .builder-course-info {

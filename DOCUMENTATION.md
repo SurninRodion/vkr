@@ -1303,9 +1303,9 @@ Endpoint `GET /api/admin/stats` возвращает:
 #### 🤖 Промпт-инжиниринг (Prompting)
 | Ключ | Название | Описание | Редкость | Очки |
 |------|----------|----------|----------|------|
-| `pe_prompt_architect` | Prompt Architect | Обработайте 25 промптов в Лаборатории | rare | 110 |
-| `pe_prompt_optimizer` | Prompt Optimizer | 10+ заданий со средним score ≥8 | epic | 150 |
-| `pe_ai_researcher` | AI Researcher | 50 анализов промптов в Лаборатории | legendary | 350 |
+| `pe_prompt_architect` | Архитектор промптов | Обработайте 25 промптов в Лаборатории | rare | 110 |
+| `pe_prompt_optimizer` | Оптимизатор промптов | 10+ заданий со средним score ≥8 | epic | 150 |
+| `pe_ai_researcher` | ИИ-исследователь | 50 анализов промптов в Лаборатории | legendary | 350 |
 
 ### 11.4. Система лиг
 
