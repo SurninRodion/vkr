@@ -1,8 +1,29 @@
 # Документация проекта PromptLearn / Prompt Academy
 
 ---
-# Туннелирование
-ssh -o StrictHostKeyChecking=no -R 80:localhost:5000 serveo.net
+# Туннелирование (для доступа из интернета без хостинга)
+Запускается в **отдельном терминале** (не закрывать его). Сайт будет доступен, пока открыт терминал.
+
+## Быстрый запуск (временная ссылка)
+```bash
+ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R 80:localhost:5000 nokey@localhost.run
+```
+После запуска появится ссылка вида `https://что-то.lhr.life` — отправьте её детям/пользователям.
+
+## Постоянная ссылка (после регистрации)
+1. Сгенерировать SSH-ключ:
+   ```bash
+   ssh-keygen -t rsa -b 4096 -f C:\Users\admin\.ssh\id_rsa
+   ```
+2. Зарегистрироваться на https://admin.localhost.run (бесплатно)
+3. Добавить публичный ключ (из `C:\Users\admin\.ssh\id_rsa.pub`) в аккаунт
+4. Запустить:
+   ```bash
+   ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R vkr.lhr.life:80:localhost:5000 localhost.run
+   ```
+5. Ссылка станет постоянной: `https://vkr.lhr.life`
+
+**Важно:** не закрывайте терминал с туннелем — как только закроете, сайт станет недоступен.
 
 
 ## 1. Общее описание
