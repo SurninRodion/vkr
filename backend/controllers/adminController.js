@@ -1715,6 +1715,64 @@ function reissueCourseCertificates(req, res) {
 
 const { getAllUsers, updateUserRole, deleteUser } = require('../models/userModel');
 
+async function getSettings(req, res) {
+  try {
+    db.all(
+      'SELECT key, value, updated_at FROM app_settings ORDER BY key',
+      [],
+      (err, rows) => {
+        if (err) {
+          console.error('[AdminController] Error fetching settings:', err.message);
+          return res.status(500).json({ message: 'Ошибка получения настроек' });
+        }
+        const settings = {};
+        (rows || []).forEach((r) => { settings[r.key] = r.value; });
+        return res.json(settings);
+      }
+    );
+  } catch (err) {
+    console.error('[AdminController] getSettings error:', err.message);
+    return res.status(500).json({ message: 'Ошибка получения настроек' });
+  }
+}
+
+async function updateSetting(req, res) {
+  try {
+    const { key } = req.params;
+    const { value } = req.body;
+
+    if (!key || value === undefined) {
+      return res.status(400).json({ message: 'key и value обязательны' });
+    }
+
+    const allowedKeys = ['email_verification_required'];
+    if (!allowedKeys.includes(key)) {
+      return res.status(400).json({ message: 'Неизвестный ключ настройки' });
+    }
+
+    const strValue = String(value);
+    if (strValue !== 'true' && strValue !== 'false') {
+      return res.status(400).json({ message: 'value должно быть "true" или "false"' });
+    }
+
+    db.run(
+      `INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, datetime('now'))
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+      [key, strValue],
+      function (err) {
+        if (err) {
+          console.error('[AdminController] Error updating setting:', err.message);
+          return res.status(500).json({ message: 'Ошибка обновления настройки' });
+        }
+        return res.json({ key, value: strValue, message: 'Настройка сохранена' });
+      }
+    );
+  } catch (err) {
+    console.error('[AdminController] updateSetting error:', err.message);
+    return res.status(500).json({ message: 'Ошибка обновления настройки' });
+  }
+}
+
 async function getUsers(req, res) {
   try {
     const users = await getAllUsers();
@@ -1853,6 +1911,9 @@ module.exports = {
   updateCourseCertificateTemplate,
   resetCourseCertificateTemplate,
   reissueCourseCertificates,
+  // Settings
+  getSettings,
+  updateSetting,
   // Users
   getUsers,
   updateUserRole: updateUserRoleController,

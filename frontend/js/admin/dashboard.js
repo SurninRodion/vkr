@@ -549,6 +549,43 @@ function showNoData(canvas, message) {
   ctx.fillText(message, rect.width / 2, rect.height / 2);
 }
 
+async function loadSettings() {
+  const toggle = document.getElementById('toggle-email-verification');
+  if (!toggle) return;
+
+  try {
+    const res = await fetch(`${ADMIN_API_BASE}/settings`, {
+      headers: getAdminHeaders()
+    });
+    if (!res.ok) throw new Error('failed');
+    const settings = await res.json();
+    toggle.checked = settings.email_verification_required === 'true';
+  } catch (e) {
+    console.error('Failed to load settings:', e);
+  }
+}
+
+async function updateSetting(key, value) {
+  try {
+    const res = await fetch(`${ADMIN_API_BASE}/settings/${encodeURIComponent(key)}`, {
+      method: 'PUT',
+      headers: getAdminHeaders(),
+      body: JSON.stringify({ value: String(value) })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'failed');
+    }
+    showToast('Настройка сохранена', 'success');
+  } catch (e) {
+    console.error('Failed to update setting:', e);
+    showToast('Не удалось сохранить настройку', 'error');
+    // Revert toggle
+    const toggle = document.getElementById('toggle-email-verification');
+    if (toggle) toggle.checked = !toggle.checked;
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   initNavbar();
 
@@ -557,5 +594,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (document.getElementById('admin-stats')) {
     loadDashboardStats();
+  }
+
+  // Settings
+  await loadSettings();
+
+  const toggle = document.getElementById('toggle-email-verification');
+  if (toggle) {
+    toggle.addEventListener('change', () => {
+      updateSetting('email_verification_required', toggle.checked);
+    });
   }
 });

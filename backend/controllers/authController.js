@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
+const db = require('../db/db');
 const { JWT_SECRET, APP_BASE_URL } = require('../config');
 const { getUserByEmail, createUser, updateUserLastSeen, markEmailVerified, updateUserPasswordHash } = require('../models/userModel');
 const { createEmailVerificationToken, consumeEmailVerificationToken } = require('../models/emailVerificationModel');
@@ -76,6 +77,19 @@ async function sendPasswordResetEmail({ email, userId, name }) {
   await sendMail({ to: email, subject, text, html });
 }
 
+function isEmailVerificationRequired() {
+  return new Promise((resolve) => {
+    db.get(
+      "SELECT value FROM app_settings WHERE key = 'email_verification_required'",
+      [],
+      (err, row) => {
+        if (err || !row) return resolve(true);
+        resolve(row.value === 'true');
+      }
+    );
+  });
+}
+
 async function register(req, res) {
   try {
     const { email, password, name } = req.body;
@@ -95,10 +109,20 @@ async function register(req, res) {
 
     const user = await createUser({ id, email, password_hash, name, role: 'user' });
     void updateUserLastSeen(user.id).catch(() => {});
+
+    const verificationRequired = await isEmailVerificationRequired();
+    let emailVerified = false;
+
+    if (verificationRequired) {
+      void sendVerificationEmail({ email: user.email, userId: user.id, name: user.name }).catch((e) => {
+        console.error('[AuthController] Failed to send verification email:', e.message);
+      });
+    } else {
+      await markEmailVerified(user.id);
+      emailVerified = true;
+    }
+
     const token = generateToken(user);
-    void sendVerificationEmail({ email: user.email, userId: user.id, name: user.name }).catch((e) => {
-      console.error('[AuthController] Failed to send verification email:', e.message);
-    });
 
     console.log('[AuthController] User registered:', email);
 
@@ -111,7 +135,7 @@ async function register(req, res) {
         role: user.role || 'user',
         points: user.points,
         level: user.level,
-        emailVerified: false
+        emailVerified
       }
     });
   } catch (err) {

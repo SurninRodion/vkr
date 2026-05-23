@@ -217,6 +217,89 @@
         }
       }
 
+      /* Settings card */
+      .settings-card {
+        background: var(--color-card, #fff);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        margin-bottom: 16px;
+      }
+
+      .setting-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .setting-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .setting-label {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--color-text, #111);
+        margin-bottom: 4px;
+      }
+
+      .setting-desc {
+        font-size: 13px;
+        color: var(--color-muted, #6b7280);
+      }
+
+      /* Toggle Switch */
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+        flex-shrink: 0;
+      }
+
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #d1d5db;
+        transition: 0.2s;
+        border-radius: 24px;
+      }
+
+      .toggle-slider::before {
+        content: '';
+        position: absolute;
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: #fff;
+        transition: 0.2s;
+        border-radius: 50%;
+      }
+
+      .toggle-switch input:checked + .toggle-slider {
+        background-color: #4f46e5;
+      }
+
+      .toggle-switch input:checked + .toggle-slider::before {
+        transform: translateX(20px);
+      }
+
+      .toggle-switch input:disabled + .toggle-slider {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
       @media (max-width: 520px) {
         .admin-stats-grid-enhanced {
           grid-template-columns: minmax(0, 1fr);
@@ -318,6 +401,21 @@
                     <span>Выполнили задания</span>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <!-- Settings Section -->
+            <div class="dashboard-section-title" style="margin-top: 24px;">⚙️ Настройки</div>
+            <div class="settings-card" id="admin-settings">
+              <div class="setting-row">
+                <div class="setting-info">
+                  <div class="setting-label">Подтверждение email</div>
+                  <div class="setting-desc">Требовать подтверждение email при регистрации</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="toggle-email-verification" />
+                  <span class="toggle-slider"></span>
+                </label>
               </div>
             </div>
 

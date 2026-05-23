@@ -167,6 +167,31 @@ function initDB() {
       }
     );
 
+    // App settings table
+    db.run(
+      `CREATE TABLE IF NOT EXISTS app_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TEXT DEFAULT (datetime('now'))
+      )`,
+      (err) => {
+        if (err) {
+          console.error('[DB] Error creating app_settings table:', err.message);
+        } else {
+          console.log('[DB] app_settings table ready');
+          // Insert default setting if not exists
+          db.run(
+            `INSERT OR IGNORE INTO app_settings (key, value) VALUES ('email_verification_required', 'true')`,
+            (insErr) => {
+              if (insErr) {
+                console.error('[DB] Error seeding default app_settings:', insErr.message);
+              }
+            }
+          );
+        }
+      }
+    );
+
     db.run(
       "ALTER TABLE users ADD COLUMN last_seen_at TEXT",
       (err) => {

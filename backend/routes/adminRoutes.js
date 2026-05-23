@@ -26,6 +26,8 @@ const {
   resetCourseCertificateTemplate,
   reissueCourseCertificates,
   devResetCourseProgress,
+  getSettings,
+  updateSetting,
   getUsers,
   updateUserRole,
   deleteUser
@@ -75,6 +77,9 @@ router.post('/lessons/:lessonId/videos', (req, res, next) => {
   });
 }, uploadLessonVideo);
 router.delete('/attachments/:id', deleteAttachment);
+
+router.get('/settings', getSettings);
+router.put('/settings/:key', updateSetting);
 
 router.get('/users', getUsers);
 router.put('/users/:id', updateUserRole);
