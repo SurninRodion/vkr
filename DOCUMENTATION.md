@@ -1,6 +1,9 @@
 # Документация проекта PromptLearn / Prompt Academy
 
 ---
+# Туннелирование
+ssh -o StrictHostKeyChecking=no -R 80:localhost:5000 serveo.net
+
 
 ## 1. Общее описание
 
