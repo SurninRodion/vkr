@@ -119,6 +119,10 @@ function seedCourses() {
         file: 'image-generation-basics.ru.json',
         logTitle: 'Генерация изображений: быстрый старт',
       },
+      {
+        file: 'promt-engineering-stepik.ru.json',
+        logTitle: 'Промт-инжиниринг с нуля: как эффективно использовать ИИ',
+      },
     ];
 
     seedFiles.forEach(({ file, logTitle }) => {

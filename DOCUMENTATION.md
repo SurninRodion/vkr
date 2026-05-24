@@ -1427,7 +1427,90 @@ const achievements = await evaluateForUser(userId);
 
 ---
 
-## 12. Краткая шпаргалка для нейросетевых сервисов
+## 12. Импорт курсов со Stepik
+
+### 12.1. Скрипт конвертации `stepikImporter.js`
+
+Платформа включает конвертер курсов со Stepik (`backend/scripts/stepikImporter.js`), который:
+
+1. **Скачивает** структуру курса через публичный Stepik API
+2. **Преобразует** в родной JSON-формат платформы (совместимый с `backend/db/initDB.js`)
+3. **Сохраняет** в `backend/db/seed/courses/` для автоматического импорта
+
+**Использование:**
+```bash
+cd backend
+node scripts/stepikImporter.js <Stepik-Course-ID> [--output имя_файла.json]
+```
+
+**Пример:**
+```bash
+node scripts/stepikImporter.js 123456
+node scripts/stepikImporter.js 123456 --output my-course.ru.json
+```
+
+После конвертации перезапустите сервер — курс создастся автоматически.
+
+### 12.2. Как получить ID курса на Stepik
+
+ID курса — это число из URL:
+- `https://stepik.org/course/123456` → ID = `123456`
+- `https://stepik.org/course/123456/syllabus` → ID = `123456`
+
+Для приватных курсов нужен OAuth-токен. Раскомментируйте строку с `Authorization` в функции `stepikFetch()` в `backend/scripts/stepikImporter.js`.
+
+### 12.3. Структура конвертации
+
+| Stepik             | Платформа           | Примечание                           |
+|--------------------|---------------------|--------------------------------------|
+| Course             | courses             | заголовок и описание                 |
+| Section            | course_modules      | модули, сортируются по position      |
+| Lesson             | course_lessons      | уроки с текстовым контентом          |
+| Step (text)        | step_type: theory   | теоретический материал               |
+| Step (video)       | step_type: video    | видеоуроки                           |
+| Step (choice/quiz) | step_type: test     | тесты и контрольные вопросы          |
+| Step (code)        | step_type: practical| практические задания                 |
+
+### 12.4. Альтернативные способы импорта
+
+1. **JSON-файл в seed-директорию** — сохраните файл в `backend/db/seed/courses/` в формате:
+   ```json
+   {
+     "title": "Название курса",
+     "description": "Описание",
+     "modules": [
+       {
+         "title": "Модуль 1",
+         "lessons": [
+           {
+             "title": "Урок 1",
+             "content": "Теория...",
+             "steps": [
+               { "step_type": "theory", "payload": { "title": "...", "content": "..." } },
+               { "step_type": "practical", "payload": { "title": "...", "task": "..." } },
+               { "step_type": "test", "payload": { "question": "...", "options": [...], "correctIndex": 0 } }
+             ]
+           }
+         ]
+       }
+     ]
+   }
+   ```
+   Затем добавьте файл в `seedFiles` в `backend/db/initDB.js`.
+
+2. **Через админ-панель** — откройте `/admin/courses`, нажмите «Создать курс» и вставьте JSON в поле импорта.
+
+3. **Ручное создание** — через админ-панель: модули → уроки → шаги.
+
+### 12.5. Требования
+
+- Node.js 18+ (встроенный `fetch`) или установленный `node-fetch` (`npm install node-fetch`)
+- Открытый доступ к Stepik API (публичные курсы)
+- Для приватных курсов — OAuth-токен
+
+---
+
+## 13. Краткая шпаргалка для нейросетевых сервисов
 
 - **Что это:** образовательная платформа по промпт-инжинирингу (Node/Express + SQLite + статический фронт).
 - **Запуск:** `cd backend && npm install && npm start`; открыть в браузере `http://localhost:5000`.
