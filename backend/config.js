@@ -3,7 +3,7 @@ require('dotenv').config();
 const path = require('path');
 
 module.exports = {
-  PORT: process.env.PORT || 5000,
+  PORT: process.env.PORT || 5001,
   JWT_SECRET: process.env.JWT_SECRET || 'dev_jwt_secret_change_me',
   DB_PATH: process.env.DB_PATH || path.join(__dirname, 'database.db'),
   AI_API_URL: process.env.AI_API_URL || '',
