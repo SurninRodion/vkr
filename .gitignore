@@ -1,7 +1,7 @@
 # Локальная SQLite — на каждой машине своя, не коммитить
-backend/database.db
+# backend/database.db
 
-backend/.env
+# backend/.env
 
 # Зависимости ставятся локально: npm install в backend/ (не коммитить)
 node_modules/
