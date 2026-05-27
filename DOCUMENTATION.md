@@ -1,12 +1,15 @@
 # Документация проекта PromptLearn / Prompt Academy
 
 ---
+npm install -g nodemon
+npm run dev -- --host 
+ipconfig
+IPv4-адрес. . . . . . . . . . . . : 192.168.0.105
 # Туннелирование (для доступа из интернета без хостинга)
 Запускается в **отдельном терминале** (не закрывать его). Сайт будет доступен, пока открыт терминал.
 
 ## Быстрый запуск (временная ссылка)
 ```bash
-ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R 80:localhost:5000 nokey@localhost.run
 ```
 После запуска появится ссылка вида `https://что-то.lhr.life` — отправьте её детям/пользователям.
 
